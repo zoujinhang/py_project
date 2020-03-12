@@ -27,7 +27,7 @@ def get_txx(t,binsize = 0.5,sigma = 1,step_size = 1,block_n = 50,block_time = No
 	'''
 	t = np.array(t)
 
-	edges_bin = np.arange(t[0],t[-1]+binsize,binsize)
+	edges_bin = np.arange(t[0],t[-1],binsize)
 
 	bin_n,bin_edges = np.histogram(t,bins = edges_bin)
 
