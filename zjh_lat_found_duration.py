@@ -80,7 +80,7 @@ def found_background(t,rate,index_list,edges,re_rate = None ,sigma = None,degree
 	:param re_rate: the rate in each block.
 	:param sigma: the sigma in each block.
 	:param degree: Tolerance of background consistency. Default value is 70.
-	:return: tree value of mean, sigma, and size of background.
+	:return: three value of mean, sigma, and size of background.
 	'''
 	
 	if re_rate is None or sigma is None:
@@ -123,6 +123,7 @@ def core_of_get_SNR(edges,re_rate,background_mean,background_sigma,dt):
 	binsize = edges[1:] - edges[:-1]
 	sigma = background_sigma * np.sqrt(dt/binsize)
 	SNR = (re_rate - background_mean)/sigma
+	SNR[SNR<0] = 0 #we only care about the part where the SNR is greater than 0.
 	return SNR
 
 
