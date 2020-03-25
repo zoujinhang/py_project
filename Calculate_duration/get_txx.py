@@ -6,8 +6,9 @@ from astropy.stats import bayesian_blocks
 def get_txx(t,binsize = 0.5,sigma = 1,step_size = 1,block_n = 50,block_time = None,txx = 0.9,it = 1000,
 	    bayesian = True,SNR =True,
 	    time_unified = True,
-	    hardness = 100
-
+	    hardness = 100,
+	    prior = 12,
+            events = False
 	    ):
 	'''
 
@@ -84,17 +85,18 @@ def get_txx(t,binsize = 0.5,sigma = 1,step_size = 1,block_n = 50,block_time = No
 		print('range:',t_in_one_stop-t_in_one_start)
 		if bayesian:
 			t_in_one = t[np.where((t>=t_in_one_start)&(t<=t_in_one_stop))[0]]
+			
+			
+			if (len(t_in_one) <= 50000)&(events):
 
-			if len(t_in_one) <= 50000:
-
-				edges = bayesian_blocks(t_in_one,fitness = 'events',gamma = np.exp(-12))
+				edges = bayesian_blocks(t_in_one,fitness = 'events',gamma = np.exp(-prior))
 			else:
 				t_b_index = np.where((t_c>=t_in_one_start)&(t_c<=t_in_one_stop))[0]
 				t_b = t_c[t_b_index]
 				#bin_n_b = bin_n[t_b_index]
 				bin_n_b = np.around((backobject.cs+bs_m)[t_b_index]*binsize)
 				#print(t_b)
-				edges = bayesian_blocks(t_b,bin_n_b,fitness = 'events',gamma = np.exp(-12))
+				edges = bayesian_blocks(t_b,bin_n_b,fitness = 'events',gamma = np.exp(-prior))
 			print('edges: ',edges)
 			if len(edges) > 3:#大于3才是有东西
 				edges_c = (edges[1:] + edges[:-1]) * 0.5
@@ -106,6 +108,7 @@ def get_txx(t,binsize = 0.5,sigma = 1,step_size = 1,block_n = 50,block_time = No
 
 
 				t_start, t_stop = found_edges(edges, bin_b_rate)
+				print('t_start,t_stop',t_start,t_stop)
 				w[np.where((t_c >= t_start) & (t_c <= t_stop))[0]] = 0
 				#w[np.where((t_c >= t_start - 5 * binsize) & (t_c <= t_stop + 5 * binsize))[0]] = 0
 				bs = WhittakerSmooth(rate,w,lambda_= hardness) #背景修正
@@ -199,7 +202,7 @@ def bined_hist(t,v,bins):
 
 def found_edges(edges,v):
 	if len(edges) == 4:
-		return 0.5*(edges[0]+edges[1]),0.5*(edges[2]+edges[3])
+		return edges[1]-0.5,edges[2]+0.5
 	edges  =  np.array(edges)
 	v = np.array(v)
 	edges_start = edges[:-1]

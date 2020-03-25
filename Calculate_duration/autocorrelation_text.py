@@ -7,7 +7,7 @@ from .background_kernel import *
 from scipy.interpolate import interp1d
 
 
-def autocorrelation_text(t,v,step_size = 1,block_n = 50,block_time = None,para = False,
+def autocorrelation_text(t,v,step_size = 1,block_n = 40,block_time = None,para = False,
 			 time_unified = True):
 	'''
 
@@ -67,23 +67,29 @@ def autocorrelation_text(t,v,step_size = 1,block_n = 50,block_time = None,para =
 	#ACC_cs = ACC_cs - AirPLS(ACC_cs).bottom_airPLS()
 	#ACC_cs = ACC_cs - Baseline_in_time(block_para[0],ACC_cs,fitness = 'bottom').bs
 	#ACC_cs 均大于等于0
-	binsize = np.percentile(ACC_cs,30)
-
+	#print('ACC_cs',ACC_cs)
+	binsize1 = np.percentile(np.sort(ACC_cs),[0,30])
+	#print('binsize',binsize1[1]-binsize1[0])
+	binsize = binsize1[1]-binsize1[0]
 	ACC_edges = np.arange(0,np.max(ACC_cs)+binsize,binsize)
-
+	#print('ACC_edges',ACC_edges)
 	pn,pe = np.histogram(ACC_cs,bins = ACC_edges)
 	pe_c = (pe[1:] + pe[:-1]) * 0.5
 	pe_c = np.concatenate((pe[:1], pe_c))
+	#print('pe_c:',pe_c)
 	pn = np.concatenate((pn[:1],pn))
 
 	if(len(pe[pn == 0])>0):
 		es = pe[pn ==0][0]
 	else:
 		es = pe_c[-1]
-
+	#print('es',es)
 	new_pe = np.linspace(0, es, 1000)
+	#print('es',new_pe)
+	#print('pn',pn)
 	new_pn = interp1d(pe_c, pn, kind='cubic')(new_pe)
-
+	#print('new_pn',new_pn)
+	#print('7777777',new_pe[new_pn<np.max(new_pn)*0.25])
 	threshold = new_pe[new_pn<np.max(new_pn)*0.25][0] #得到阈值
 
 	#index_back_of_block = np.where(ACC_cs<=threshold)[0]

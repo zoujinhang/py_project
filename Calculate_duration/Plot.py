@@ -17,7 +17,7 @@ class Plot(object):
 		bs = self.result['bs']
 		plt.plot(t,rate,color = 'b',label = 'light curve',**k)
 		plt.plot(t,bs,color = 'r',label = 'background',**k)
-		plt.plot(t,bs+sigma,color = 'y',label = 'sigma',**k)
+		plt.plot(t,bs+3*sigma,color = 'y',label = '3sigma',**k)
 
 		try:
 			by_edges_list = self.result['bayesian_edges']

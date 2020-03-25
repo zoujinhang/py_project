@@ -12,7 +12,7 @@ from .r_baseline import r_baseline
 
 class Baseline_in_time(object):
 
-	def __init__(self,time,value,case='FD',hardness = False,time_unified = True):
+	def __init__(self,time,value,case='FD',hardness = False,time_unified = False):
 		self.time = time
 		self.value = value
 
