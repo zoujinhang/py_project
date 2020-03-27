@@ -1,5 +1,5 @@
 import numpy as np
-import matplotlib as mlp
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import os
 from astropy.io import fits
@@ -14,12 +14,12 @@ if os.path.exists(savedir) == False:
 
 def re_histogram(t,rate,edges):
 	'''
-	now it is a stable function, it can re-bin the data, 't' and 'rate', with the new bin edges, 'edges'.
+	This is a stable function, which can re-bin the data 't' and 'rate' with the new bin edges 'edges'.
 	
 	:param t: The time of light curve.
 	:param rate: The counts rate of light curve.
 	:param edges: the new bin-edges, whose interval can different from each other.
-	:return: two array ,The rebined rate and sigma of each bins.
+	:return: three array ,The rebined rate and sigma of each bins.
 	'''
 	
 	index = np.where(t >= edges[0])[0]
@@ -69,8 +69,67 @@ def confidence_analysis(mean1,sigma1,T1,mean2,sigma2,T2,dt,degree = 3):
 	sigma2_1 = sigma2*np.sqrt(dt/T1)
 	return (mean1>=mean2-degree*sigma2_1)&(mean1<=mean2+degree*sigma2_1)&(mean2>=mean1-degree*sigma1_2)&(mean2<=mean1+degree*sigma1_2)
 
+def background_correction(t,rate,edges,degree = 50,plot_save = None):
+	'''
+	
+	:param t:
+	:param rate:
+	:param edges:
+	:param degree:
+	:return:
+	'''
+	re_rate,re_sigma,index_list = re_histogram(t,rate,edges)
+	dt = t[1]-t[0]
+	binsize = edges[1:]-edges[:-1]
+	sort_index = np.argsort(-binsize)
+	sort_binsize = binsize[sort_index]
+	sort_sigma = re_sigma[sort_index]
+	sort_re_rate = re_rate[sort_index]
+	sort_index_list = np.array(index_list)[sort_index]
+	background_pool = rate[sort_index_list[0]]
+	correction_t = [edges[0],edges[-1]+dt,t[sort_index_list[0]][0],t[sort_index_list[0]][-1]]
+	mean1 = sort_re_rate[0]
+	correction_rate = [rate[0],rate[-1],mean1,mean1]
+	sigma1 = sort_sigma[0]
+	binsize1 = sort_binsize[0]
+	n = 1
+	for i in range(1,len(sort_binsize)):
+		if confidence_analysis(mean1,sigma1,binsize1,sort_re_rate[i],sort_sigma[i],sort_binsize[i],dt,degree):
+			n = n+1
+			correction_t.append(t[sort_index_list[i]][0])
+			correction_t.append(t[sort_index_list[i]][-1])
+			correction_rate.append(sort_re_rate[i])
+			correction_rate.append(sort_re_rate[i])
+			background_pool = np.concatenate((background_pool,rate[sort_index_list[i]]))
+			mean1 = background_pool.mean()
+			sigma1 = background_pool.std(ddof = 1)
+			binsize1 = binsize1 + sort_binsize[i]
+	print('The number of background blocks is %d.'%n)
+	correction_t = np.array(correction_t)
+	correction_rate = np.array(correction_rate)
+	sort_t_index = np.argsort(correction_t)
+	correction_t = correction_t[sort_t_index]
+	correction_rate = correction_rate[sort_t_index]
+	if plot_save is not None:
+		fig = plt.figure()
+		ax = fig.add_subplot(1,1,1)
+		ax.step(edges,np.concatenate((re_rate[:1],re_rate)))
+		ax.plot(correction_t,correction_rate)
+		fig.savefig(plot_save)
+		plt.close(fig)
+	
+	correction_b = np.interp(t,correction_t,correction_rate)
+	new_rate = rate - correction_b + correction_b.mean()
+	re_rate,re_sigma,index_list = re_histogram(t,new_rate,edges)
+	result = {'lc':(t,new_rate),
+	          're_hist':(re_rate,re_sigma,index_list),
+	          'bkg':(mean1,sigma1,binsize1)
+	          }
+	return result
+	
+	
 
-def found_background(t,rate,index_list,edges,re_rate = None ,sigma = None,degree = 70):
+def found_background(t,rate,index_list,edges,re_rate = None ,sigma = None,degree = 50):
 	'''
 	
 	:param t: Time of light curve.
@@ -119,11 +178,22 @@ def found_background(t,rate,index_list,edges,re_rate = None ,sigma = None,degree
 
 
 
-def core_of_get_SNR(edges,re_rate,background_mean,background_sigma,dt):
+def core_of_get_SNR(edges,re_rate,background_mean,background_sigma,dt,non_negative = True):
+	'''
+	
+	:param edges:
+	:param re_rate:
+	:param background_mean:
+	:param background_sigma:
+	:param dt:
+	:param non_negative:
+	:return:
+	'''
 	binsize = edges[1:] - edges[:-1]
 	sigma = background_sigma * np.sqrt(dt/binsize)
 	SNR = (re_rate - background_mean)/sigma
-	SNR[SNR<0] = 0 #we only care about the part where the SNR is greater than 0.
+	if non_negative:
+		SNR[SNR<0] = 0 #we only care about the part where the SNR is greater than 0.
 	return SNR
 
 
@@ -152,9 +222,14 @@ edges = bayesian_blocks(t_c,bin_n_sm,fitness='events',p0 = 0.001)
 print('edges:\n',edges)
 
 
-re_rate,re_sigma,index_list = re_histogram(t_c,rate_sm,edges)
+#re_rate,re_sigma,index_list = re_histogram(t_c,rate_sm,edges)
 
-background_mean,background_sigma,backgound_size = found_background(t_c,rate_sm,index_list,edges,re_rate,re_sigma,degree = 70)
+result = background_correction(t_c,rate_sm,edges,degree = 50)
+background_mean,background_sigma,backgound_size = result['bkg']
+t_c,rate_correct = result['lc']
+re_rate,re_sigma,index_list = result['re_hist']
+
+#background_mean,background_sigma,backgound_size = found_background(t_c,rate_sm,index_list,edges,re_rate,re_sigma,degree = 70)
 
 re_rate1 = np.concatenate((re_rate[:1],re_rate))
 re_sigma1 = np.concatenate((re_sigma[:1],re_sigma))
@@ -169,11 +244,11 @@ plt.subplot(2,1,2)
 plt.plot(t_c,rate_sm)
 
 plt.step(edges,re_rate1,color = 'k')
-plt.step(edges,re_rate1+re_sigma1,color = 'y')
-plt.step(edges,re_rate1-re_sigma1,color = 'y')
+#plt.step(edges,re_rate1+re_sigma1,color = 'y')
+#plt.step(edges,re_rate1-re_sigma1,color = 'y')
 plt.axhline(y = background_mean,color = 'r')
-plt.axhline(y = background_mean-background_sigma,color = 'r')
-plt.axhline(y = background_mean+background_sigma,color = 'r')
+#plt.axhline(y = background_mean-background_sigma,color = 'r')
+#plt.axhline(y = background_mean+background_sigma,color = 'r')
 plt.ylim(0,5000)
 plt.xlim(edges[0],edges[-1])
 plt.savefig(savedir + 'A_lightcurve.png')
@@ -186,7 +261,7 @@ the classical SNR is different from bayesian SNR . because bayesian SNR has diff
 '''
 
 plt.figure()
-plt.plot(t_c,(rate_sm-background_mean)/background_sigma,label = 'classical SNR')
+plt.plot(t_c,(rate_correct-background_mean)/background_sigma,label = 'classical SNR')
 plt.step(edges,SNR1,color = 'k',label = 'Bayesian blocks SNR')
 plt.axhline(y=5,color = 'r',label = r'5 $\sigma$')
 plt.axhline(y=0,color = 'y',label = 'zero')
@@ -197,8 +272,27 @@ plt.legend()
 plt.savefig(savedir+ 'B_SNR.png')
 plt.close()
 
+fig = plt.figure()
+gs = mpl.gridspec.GridSpec(2,1,wspace = 0.05,hspace = 0.05)
+ax1 = fig.add_subplot(gs[0,0])
+ax1.plot(t_c,rate_correct,label = 'lightcurve')
+ax1.step(edges,re_rate1,color = 'k',label = 'Bayesian blocks')
+ax1.set_xticks([])
+ax1.set_ylabel('Rate')
+ax1.set_xlim(-100,200)
+ax1.set_ylim(0,5000)
+ax1.legend()
 
+ax2 = fig.add_subplot(gs[1,0])
+ax2.plot(t_c,(rate_correct-background_mean)/background_sigma,label = 'Classical SNR')
+ax2.step(edges,SNR1,color = 'k',label = 'Bayesian blocks SNR')
+ax2.axhline(y=5,color = 'r',label = r'5 $\sigma$')
+ax2.axhline(y=0,color = 'y',label = 'Zero')
+ax2.set_xlabel('time (s)')
+ax2.set_ylabel('SNR')
+ax2.set_xlim(-100,200)
+ax2.set_ylim(-10,100)
+ax2.legend()
 
-
-
-
+fig.savefig(savedir + 'C_SNR_lightcurve.png')
+plt.close(fig)
