@@ -57,7 +57,9 @@ def background_correction(t,rate,edges,degree = 50,plot_save = None):
 	re_rate,re_sigma,index_list = re_histogram(t,new_rate,edges)
 	result = {'lc':(t,new_rate),
 	          're_hist':(re_rate,re_sigma,index_list),
-	          'bkg':(mean1,sigma1,binsize1)
+	          'bkg':(mean1,sigma1,binsize1),
+	          'edges':edges,
+	          'dt':dt
 	          }
 	return result
 
@@ -139,7 +141,74 @@ def confidence_analysis(mean1,sigma1,T1,mean2,sigma2,T2,dt,degree = 3):
 
 
 
+def get_bayesian_duration(data,sigma = 5):
+	'''
+	
+	:param data:
+	:param sigma:
+	:return:
+	'''
+	start = 0
+	stop = 0
+	pulse = 1
+	cafe = 2
+	fringe_up = 3
+	fringe_down = 4
+	#t,rate = data['lc']
+	edges = data['edges']
+	re_rate,re_sigma,index_list = data['re_hist']
+	dt = data['dt']
+	bkg,bkgsigma,bkgsize = data['bkg']
+	SNR = get_SNR(edges,re_rate,bkg,bkgsigma,dt,non_negative=True)
+	
+	binstart = edges[:-1]
+	#binstop = edges[1:]
+	trait = []
+	for index1,hight in enumerate(re_rate):
+		if (index1 == 0):
+			trait.append(start)
+		elif (index1 == len(re_rate)-1):
+			trait.append(stop)
+		else:
+			if (hight> re_rate[index1-1]) and (hight > re_rate[index1+1]):
+				trait.append(pulse)
+			elif (hight <= re_rate[index1-1]) and (hight <= re_rate[index1+1]):
+				trait.append(cafe)
+			elif (hight < re_rate[index1-1]) and (hight >= re_rate[index1+1]):
+				trait.append(fringe_down)
+			elif (hight >= re_rate[index1-1]) and (hight < re_rate[index1+1]):
+				trait.append(fringe_up)
+			else:
+				trait.append(cafe)
+	start_tag = False
+	start_edges = []
+	stop_edges = []
+	
+	for index,value in enumerate(trait):
 
+		if (SNR[index]>sigma) and (start_tag == False):
+			
+			if value != fringe_down:
+				start_edges.append(binstart[index])
+				start_tag = True
+			else:
+				stop_edges.pop()
+				start_tag = True
+				
+			
+		elif (SNR[index] <= sigma) and start_tag:
+			
+			if value != fringe_up:
+				stop_edges.append(binstart[index])
+				start_tag = False
+	if start_tag:
+		start_edges.pop()
+	if start_edges[0] == binstart[0]:
+		start_edges = start_edges[1:]
+		stop_edges = stop_edges[1:]
+	return np.array(start_edges),np.array(stop_edges)
+
+	
 
 
 
