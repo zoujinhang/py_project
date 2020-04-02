@@ -34,10 +34,10 @@ rate_sm = cs_rate+bs_rate.mean()
 bin_n_sm = np.round(rate_sm*binsize)
 
 edges = bayesian_blocks(t_c,bin_n_sm,fitness='events',p0 = 0.001)
-
+#-----------------------------------------------------------------
 result = background_correction(t_c,rate_sm,edges,degree = 50)
 startedges,stopedges = get_bayesian_duration(result,sigma = 5)
-
+#-----------------------------------------------------------------
 background_mean,background_sigma,backgound_size = result['bkg']
 t_c,rate_correct = result['lc']
 re_rate,re_sigma,index_list = result['re_hist']

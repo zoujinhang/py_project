@@ -95,7 +95,7 @@ def findfile(dir1,feature):
                             if (i[j:j + fe_number] == featurelist[eve]):
                                 fileresult[eve].append(i)
                                 fil_result_number = fil_result_number + 1
-                                break
+                                
                     #print('1----------',fileresult[eve])#------------------------
                     if (fil_result_number == 0):
                         print('we do not find any file that has the feature with [' + feature + ']!\n')
