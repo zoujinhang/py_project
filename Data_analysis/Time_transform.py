@@ -1,9 +1,15 @@
+'''
+utc 与仪器时间的转化
+'''
 from astropy.time import Time
 import numpy as np
 
 class Time_transform(object):
 	def __init__(self,time_origin = None):
+		'''
 		
+		:param time_origin:
+		'''
 		leap_second_mjd = np.array([41499.0,41499.0,41864.0,42413.0,42778.0,43144.0,43509.0,
 		                            43874.0,44239.0,44786.0,45151.0,45516.0,46247.0,47161.0,
 		                            47892.0,48257.0,48804.0,49169.0,49534.0,50083.0,50630.0,
@@ -89,5 +95,3 @@ class Time_transform(object):
 					break
 		mjd_array = (met_array-add_array)/86400 + self.time_origin
 		return Time(mjd_array,format='mjd',scale = 'utc')
-
-
