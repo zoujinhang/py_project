@@ -139,12 +139,10 @@ def confidence_analysis(mean1,sigma1,T1,mean2,sigma2,T2,dt,degree = 3):
 	return (mean1>=mean2-degree*sigma2_1)&(mean1<=mean2+degree*sigma2_1)&(mean2>=mean1-degree*sigma1_2)&(mean2<=mean1+degree*sigma1_2)
 
 
-
-
 def get_bayesian_duration(data,sigma = 5):
 	'''
 	
-	:param data:
+	:param data: the result from background_correction()
 	:param sigma:
 	:return:
 	'''
@@ -208,7 +206,61 @@ def get_bayesian_duration(data,sigma = 5):
 		stop_edges = stop_edges[1:]
 	return np.array(start_edges),np.array(stop_edges)
 
+def get_bayesian_flash(data,start_edges,stop_edges):
+	'''
 	
-
-
+	:param data: the result from background_correction()
+	:param start_edgs: the result from get_bayesian_duration()
+	:param stop_edges:
+	:param sigma:
+	:return:
+	'''
+	start = 0
+	stop = 0
+	pulse = 1
+	cafe = 2
+	fringe = 3
+	edges = data['edges']
+	edges_c = (edges[1:] + edges[:-1])*0.5
+	re_rate,re_sigma,index_list = data['re_hist']
+	flash_start = []
+	flash_stop = []
+	for i in range(len(start_edges)):
+		#select blocks and edges between the start edge and stop edges of a burst.
+		indexi = np.where((edges_c>=start_edges[i])&(edges_c<=stop_edges[i]))[0]
+		
+		flash_start.append(start_edges[i])
+		if len(indexi)>=3:
+			#only the size of block larger than 3 can the burst has the bayesian flash.
+			re_ratei = re_rate[indexi]
+			edgesi_index = np.where((edges >= start_edges[i]) & (edges <= stop_edges[i]))[0]
+			edgesi = edges[edgesi_index]
+			edg_star = edgesi[:-1]
+			edg_stop = edgesi[1:]
+			trait = []
+			for index1,hight in enumerate(re_ratei):
+				if (index1 == 0):
+					trait.append(start)
+				elif (index1 == len(re_ratei)-1):
+					trait.append(stop)
+				else:
+					if (hight> re_ratei[index1-1]) and (hight > re_ratei[index1+1]):
+						trait.append(pulse)
+					elif (hight < re_ratei[index1-1]) and (hight < re_ratei[index1+1]):
+						trait.append(cafe)
+					else:
+						trait.append(fringe)
+			trait = np.array(trait)
+			indexj = np.where(trait == cafe)[0]
+			
+			if len(indexj) >= 3:
+				for ij in indexj:
+					flash_start.append(edg_stop[ij])#the cafe stop edge is the start edge of a flash.
+					flash_stop.append(edg_star[ij])#the cafe start edge is the stop edge of a flash.
+		flash_stop.append(stop_edges[i])
+	return np.array(flash_start),np.array(flash_stop)
+	
+	
+	
+		
 

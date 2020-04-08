@@ -18,6 +18,8 @@ def F_lt_1(x):
 def F_gt_1(x):
 	return (np.pi/2)**(1/2)*np.exp(-x)*x**(1/2)#远大于1近似公式
 
+def F_lt_2(x):
+	return 4*np.pi*(x/2)**(1/3)/np.sqrt(3)*gamma(1/3)#远小于1近似公式
 savedir = '/home/laojin/my_lat/synchrotron_radiation/'
 if os.path.exists(savedir) == False:
 	os.makedirs(savedir)
@@ -32,6 +34,7 @@ plt.plot(x,y,color = 'k',label = 'F(x)')
 plt.axvline(x = 0.3,color = 'r',label = 'x = 0.3')
 plt.plot(x[x>1],F_gt_1(x[x>1]),color = 'g',label = 'Approximation of F(x) with x>>1')
 plt.plot(x[x<1],F_lt_1(x[x<1]),color = 'y',label = 'Approximation of F(x) with x<<1')
+#plt.plot(x[x<1],F_lt_2(x[x<1]),color = 'blue',label = 'Approximation of F(x) with x<<1')
 plt.ylabel('F(x)')
 plt.xlabel('x')
 plt.xscale('log')
@@ -40,6 +43,21 @@ plt.ylim(0,1)
 plt.legend()
 plt.savefig(savedir + 'A_F.png')
 plt.close()
+
+plt.plot(x,y,color = 'k',label = 'F(x)')
+plt.axvline(x = 0.3,color = 'r',label = 'x = 0.3')
+plt.plot(x[x>1],F_gt_1(x[x>1]),color = 'g',label = 'Approximation of F(x) with x>>1')
+plt.plot(x[x<1],F_lt_1(x[x<1]),color = 'y',label = 'Approximation of F(x) with x<<1')
+plt.plot(x[x<1],F_lt_2(x[x<1]),color = 'blue',label = 'Approximation of F(x) with x<<1')
+plt.ylabel('F(x)')
+plt.xlabel('x')
+plt.xscale('log')
+plt.xlim(x[0],x[-1])
+#plt.ylim(0,1)
+plt.legend()
+plt.savefig(savedir + 'C_F.png')
+plt.close()
+
 
 x2 = np.linspace(0,4,100)
 y2 = F(x2)
