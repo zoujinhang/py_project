@@ -165,7 +165,17 @@ class Plot(object):
 		else:
 			print('T' + txx + ' is not good!')
 
-	
+	def plot_normallization(self,**kwargs):
+		normallization = self.result['normallization']
+		t = self.result['t_c']
+		plt.plot(t,normallization,**kwargs)
+
+
+	def plot_ACC(self,**kwargs):
+
+		ACCT = self.result['ACCT']
+		ACC = self.result['ACC']
+		plt.plot(ACCT,ACC)
 
 
 

@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import os
 from astropy.io import fits
 from astropy.stats import bayesian_blocks
-from Calculate_duration.background_kernel import r_baseline
+from Calculate_duration_old.background_kernel import r_baseline
 
 datalink = '/home/laojin/trigdata/glg_tte_n1_bn200101861_v00.fit'
 savedir = '/home/laojin/my_lat/found_duration/'
@@ -22,14 +22,21 @@ def re_histogram(t,rate,edges):
 	:return: three array ,The rebined rate and sigma of each bins.
 	'''
 	
+	
+	re_rate = np.zeros(len(edges)-1)
+	re_sigma = np.zeros(len(edges)-1)
+	strat = edges[:-1]
+	stop = edges[1:]
+	index_list = []
+	for i in range(len(strat)):
+		indexs = np.where((t>=strat[i])&(t<stop[i]))[0]
+		index_list.append(indexs)
+	'''
 	index = np.where(t >= edges[0])[0]
 	t = t[index]
 	rate = rate[index]
-	re_rate = np.zeros(len(edges)-1)
-	re_sigma = np.zeros(len(edges)-1)
-	edges_num = 1
-	index_list = []
 	ones = []
+	edges_num = 1
 	for index1,value in enumerate(t):
 		if value > edges[edges_num] or value == t[-1]:
 			ones.append(index1)
@@ -40,14 +47,23 @@ def re_histogram(t,rate,edges):
 				break
 		else:
 			ones.append(index1)
+	'''
 	for index1,value in enumerate(index_list):
 		one_rate = rate[value]
-		index_list[index1] = np.array(value)+index[0]
-		re_rate[index1] = one_rate.mean()
-		if len(one_rate) == 1:
-			re_sigma[index1] = one_rate.std(ddof = 0)
+		index_list[index1] = value#+index[0]
+		if len(one_rate) > 0:
+			re_rate[index1] = one_rate.mean()
+			if len(one_rate) == 1:
+				re_sigma[index1] = one_rate.std(ddof=0)
+			else:
+				re_sigma[index1] = one_rate.std(ddof=1)
 		else:
-			re_sigma[index1] = one_rate.std(ddof = 1)
+			if index1 == len(index_list) - 1:
+				re_rate[index1] = re_rate[index1 - 1]
+				re_sigma[index1] = re_sigma[index1 - 1]
+			else:
+				re_rate[index1] = 0
+				re_sigma[index1] = 1
 	return re_rate,re_sigma,np.array(index_list)
 
 def confidence_analysis(mean1,sigma1,T1,mean2,sigma2,T2,dt,degree = 3):
@@ -69,7 +85,7 @@ def confidence_analysis(mean1,sigma1,T1,mean2,sigma2,T2,dt,degree = 3):
 	sigma2_1 = sigma2*np.sqrt(dt/T1)
 	return (mean1>=mean2-degree*sigma2_1)&(mean1<=mean2+degree*sigma2_1)&(mean2>=mean1-degree*sigma1_2)&(mean2<=mean1+degree*sigma1_2)
 
-def background_correction(t,rate,edges,degree = 50,plot_save = None):
+def background_correction(t,rate,edges,backgroundsize = 10,degree = 5,plot_save = None):
 	'''
 	
 	:param t:
@@ -94,7 +110,15 @@ def background_correction(t,rate,edges,degree = 50,plot_save = None):
 	binsize1 = sort_binsize[0]
 	n = 1
 	for i in range(1,len(sort_binsize)):
-		if confidence_analysis(mean1,sigma1,binsize1,sort_re_rate[i],sort_sigma[i],sort_binsize[i],dt,degree):
+		if binsize1>backgroundsize:
+			binsize1_ = backgroundsize
+		else:
+			binsize1_ = binsize1
+		if sort_binsize[i] > backgroundsize:
+			sort_binsizei_ = backgroundsize
+		else:
+			sort_binsizei_ = sort_binsize[i]
+		if confidence_analysis(mean1,sigma1,binsize1_,sort_re_rate[i],sort_sigma[i],sort_binsizei_,dt,degree) and len(t[sort_index_list[i]])>0:
 			n = n+1
 			correction_t.append(t[sort_index_list[i]][0])
 			correction_t.append(t[sort_index_list[i]][-1])
@@ -218,13 +242,13 @@ bs_rate = r_baseline(rate,binsize)
 rate_sm = rate - bs_rate+bs_rate.mean()
 bin_n_sm = np.round(rate_sm*binsize)
 
-edges = bayesian_blocks(t_c,bin_n_sm,fitness='events',p0 = 0.001)
+edges = bayesian_blocks(t_c,bin_n_sm,fitness='events',gamma = np.exp(-5))
 print('edges:\n',edges)
 
 
 #re_rate,re_sigma,index_list = re_histogram(t_c,rate_sm,edges)
 
-result = background_correction(t_c,rate_sm,edges,degree = 50)
+result = background_correction(t_c,rate_sm,edges)
 background_mean,background_sigma,backgound_size = result['bkg']
 t_c,rate_correct = result['lc']
 re_rate,re_sigma,index_list = result['re_hist']

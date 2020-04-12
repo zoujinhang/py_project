@@ -61,17 +61,20 @@ class Time_transform(object):
 		mjd = (met-add_s)/86400 + self.time_origin
 		return Time(mjd,format='mjd',scale = 'utc')
 
-	def batch_utc_to_met(self,utc_list):
+	def batch_utc_to_met(self,utc_list,astropyTime = False):
 		'''
 		
 		:param utc_list:
 		:return:
 		'''
 		add_array = np.zeros(len(utc_list))
-		if isinstance(utc_list[0], str):
-			mjd_array = Time(utc_list).mjd
+		if astropyTime:
+			mjd_array = utc_list.mjd
 		else:
-			mjd_array = Time(utc_list,format = 'mjd',scale = 'utc').mjd
+			if isinstance(utc_list[0], str):
+				mjd_array = Time(utc_list).mjd
+			else:
+				mjd_array = Time(utc_list,format = 'mjd',scale = 'utc').mjd
 		for index1,mjd_ in enumerate(mjd_array):
 			for index2,value2 in enumerate(self.leap_second_mjd):
 				if mjd_ >= value2:

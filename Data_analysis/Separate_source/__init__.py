@@ -76,7 +76,7 @@ class Separate_source(object):
 		b_b_ch = np.array([])
 		for i in self.ch_n:
 			print('check channel ', i,end = '\r')
-			b_S, b_B = self.separate_background_for_one_ch(self.b, self.b_ch, i)
+			b_S, b_B = self.separate_background_for_one_ch(self.b_t, self.b_ch, i)
 			S_ch = np.zeros_like(b_S) + i
 			B_ch = np.zeros_like(b_B) + i
 			b_s = np.concatenate((b_s, b_S))

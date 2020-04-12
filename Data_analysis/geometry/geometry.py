@@ -126,13 +126,13 @@ class Geometry(object):
 		:param source:
 		:return:
 		'''
-		tab = Table(names=["Detector_index", "Separation"], dtype=["|S2", np.float64])
+		tab = Table(names=["Detector_index", "Separation"], dtype=[int, np.float64])
 		if source is not None:
 			for index1,center in enumerate(self.detectors.center_all[index]):
 				sep = center.separation(source)
 				tab.add_row([index1,sep])
 			tab['Separation'].unit = u.degree
-			tab.sort('Separation')
+			#tab.sort('Separation')
 			return tab
 		else:
 			print('No source! return None')
@@ -226,7 +226,7 @@ class Geometry(object):
 			for i,v in enumerate(index_):
 				r,ra,dec = fovs[i]
 				lon_lis, lat_lis = get_poly(centor[i],r,ra,dec,pole,lon_0)
-				print(str(self.detectors.name_list[v]))
+				#print(str(self.detectors.name_list[v]))
 				#print(lon_lis, lat_lis)
 				for ij in range(len(lon_lis)):
 					x,y = map(lon_lis[ij],lat_lis[ij])

@@ -20,7 +20,7 @@ class Event_rate_analysis(object):
 	def get_BPS(self):
 		edges = np.arange(self.time_start,self.time_stop+1,1)
 		bin_n,bin_edges = np.histogram(self.t,bins = edges)
-		bin_n = np.concatenate(([bin_n[0]],bin_n))
+		bin_n = np.concatenate((bin_n[:1],bin_n[:-1],bin_n[-2:-1]))#去掉最后一个不完整块
 		bs = TD_baseline(bin_edges,bin_n)[2]
 		BPS = np.interp(self.t,bin_edges,bs)
 		#rand = np.random.normal(BPS.size)*np.sqrt(BPS)

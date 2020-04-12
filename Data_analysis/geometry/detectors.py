@@ -30,7 +30,7 @@ class Detectors(object):
 				 [1.0, 0.0, 0.0], [-1.0, 0.0, 0.0]])
 			
 		if ((local_az is None) or (local_zen is None)) and (local_vector is None) and (name_list is None):
-			self.name_list = ['n0','n1','n2','n3','n4','n5','n6','n7','n8','n9','na','nb','b0','b1']
+			self.name_list = np.array(['n0','n1','n2','n3','n4','n5','n6','n7','n8','n9','na','nb','b0','b1'])
 		else:
 			if name_list is None :
 				self.name_list = np.arange(len(self.vector))

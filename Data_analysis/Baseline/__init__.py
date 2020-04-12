@@ -37,9 +37,9 @@ def TD_baseline(time,rate,lam = None,hwi = None,it = None,inti = None):
 	'''
 	dt = time[1]-time[0]
 	if(lam is None):
-		lam = 100/np.sqrt(dt)
+		lam = 100/dt**1.5
 	else:
-		lam = lam/np.sqrt(dt)
+		lam = lam/dt**1.5
 	if(hwi is None):
 		hwi = int(20/dt)
 	if(it is None):
