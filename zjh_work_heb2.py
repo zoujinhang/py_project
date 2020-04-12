@@ -2,8 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 from astropy.io import fits
-from Calculate_duration import get_txx
-from Calculate_duration import Plot
+from Calculate_duration_old import get_txx
+from Calculate_duration_old import Plot
 
 savedir = '/home/laojin/my_work/heb/result/'
 hebdatalink = '/home/laojin/my_work/heb/data/HEB190530429_HE-Evt_detc12.fits'
