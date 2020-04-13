@@ -22,17 +22,24 @@ class WT_kernel(object):
 		return self.rate
 
 	def weight(self,x,x0,sigma):
-		return np.exp(-(x-x0)**2/(2*sigma**2))
+		rr = np.exp(-(x-x0)**2*sigma)
+		#rr = 1-sigma*(x-x0)**2
+		rr[rr<1e-22] = 0
+		return rr
+		#return np.exp(-(x-x0)**2*sigma)
 
 	def work_WT(self):
 		#这里的卷积有些慢。
 		dt = self.t[1:]-self.t[:-1]
-		wt = []
+		wt = np.zeros(len(self.t))
+		#sigma_ = (1/self.dt)**2
+		sigma = 0.5/(self.dt)**2
 		for index,value in enumerate(self.t):
-			ww = self.weight(self.t,value,self.dt)  #长度为t的长度。
+			ww = self.weight(self.t,value,sigma)  #长度为t的长度。
 			dti = np.insert(dt,index,0)
 			ww_sum = ww.sum()-1
-			wti = (dti*ww).sum()/ww_sum
-			wt.append(wti)
-		wt = np.array(wt)
+			wt[index] = (dti*ww).sum()/ww_sum
+			#wti = (dti*ww).sum()/ww_sum
+			#wt.append(wti)
+		#wt = np.array(wt)
 		return wt

@@ -73,7 +73,7 @@ class Detectors(object):
 		return mat
 
 	def get_center(self):
-		print('get_center')
+		#print('get_center')
 		detector_index_list1 = []
 		center_all_list = []
 		for mat in self.mat_list:

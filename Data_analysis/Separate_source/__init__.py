@@ -50,7 +50,8 @@ class Separate_source(object):
 		s_ch = np.array([])
 		b_ch = np.array([])
 		for i in self.ch_n:
-			print('inite channel ', i)
+			print('                                  ',end = '\r')
+			print('inite channel ', i,end = '\r')
 			S, B = self.separate_background_for_one_ch(self.t, self.ch, i)
 			S_ch = np.zeros_like(S) + i
 			B_ch = np.zeros_like(B) + i
@@ -75,6 +76,7 @@ class Separate_source(object):
 		b_s_ch = np.array([])
 		b_b_ch = np.array([])
 		for i in self.ch_n:
+			print('                                  ',end = '\r')
 			print('check channel ', i,end = '\r')
 			b_S, b_B = self.separate_background_for_one_ch(self.b_t, self.b_ch, i)
 			S_ch = np.zeros_like(b_S) + i
@@ -92,7 +94,7 @@ class Separate_source(object):
 		c_b_ch = b_b_ch[b_b_index]
 		self.b_t = c_b
 		self.b_ch = c_b_ch
-		c_s = np.concatenate((c_s, self.s))
+		c_s = np.concatenate((c_s, self.s_t))
 		c_s_ch = np.concatenate((c_s_ch, self.s_ch))
 		sort_index = np.argsort(c_s)
 		self.s_t = c_s[sort_index]

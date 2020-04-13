@@ -187,7 +187,7 @@ class Geometry(object):
 			centor = self.get_detector_centers(index = [index])[0]
 		
 		if show_bodies and self.sc_pos is not None:
-			print('plot_earth!')
+			#print('plot_earth!')
 			if projection in ['moll']:
 				postion, r, lon, lat = self.get_earth_point(index=[index])[0]
 				lon_lis, lat_lis = get_poly(postion, r, lon, lat, pole,lon_0)
@@ -421,7 +421,7 @@ def get_poly(position, radius, x, y, pole, lon_0):
 	inde = pole.separation(position) <= radius * u.degree
 	pole_in = pole[inde]
 	add_x = np.zeros(100) + xx_dd
-	add_y = np.linspace(-90, 90, 100)
+	add_y = np.linspace(-89.9999, 89.9999, 100)
 	if pole_in.size > 0:
 		xx_dd180 = loop_data([xx_dd+180])[0]
 		#print('pole_in.size > 0')
@@ -444,7 +444,7 @@ def get_poly(position, radius, x, y, pole, lon_0):
 					add_y_a = add_y[indexs]
 					add_x_a = add_x[indexs]
 					indexssort = np.argsort(add_y_a)
-					ds = get_ra(n0,xx_dd)
+					ds = get_ra(n0,x[i])
 					n_v = ds / np.abs(ds)
 					add_y_a = add_y_a[indexssort]
 					add_x_a = add_x_a[indexssort] + 0.1*n_v
@@ -453,9 +453,8 @@ def get_poly(position, radius, x, y, pole, lon_0):
 						y_n.append(add_y_a[i])
 					indexssort = np.argsort(-add_y_a)
 					add_y_a = add_y_a[indexssort]
-					ds = get_ra(x[i],xx_dd)
-					n_v = ds / np.abs(ds)
-					add_x_a = add_x_a[indexssort] + 0.1*n_v
+					
+					add_x_a = add_x_a[indexssort] - 0.1*n_v
 					for i in range(len(add_y_a)):
 						x_n.append(add_x_a[i])
 						y_n.append(add_y_a[i])
@@ -469,14 +468,16 @@ def get_poly(position, radius, x, y, pole, lon_0):
 			y_n = []
 			n0 = x[0]
 			y0 = y[0]
+			
 			for i in range(1, len(x)):
 				if judge(x[i],n0,xx_dd,xx_dd180) == False:
+					
 					x_n.append(x[i])
 					y_n.append(y[i])
 					n0 = x[i]
 					y0 = y[i]
 				else:
-					#print(x[i],n0,xx_dd,xx_dd180)
+					#print('dddddd',x[i],n0,xx_dd,xx_dd180)
 					#print(i)
 					indexs = np.where(add_y <= y0)[0]
 					add_y_a = add_y[indexs]
@@ -484,9 +485,10 @@ def get_poly(position, radius, x, y, pole, lon_0):
 					add_x_a = add_x[indexs]
 					indexssort = np.argsort(-add_y_a)
 					add_y_a = add_y_a[indexssort]
-					ds = get_ra(n0,xx_dd)
+					ds = get_ra(n0,x[i])
 					n_v = ds / np.abs(ds)
 					add_x_a = add_x_a[indexssort]+0.1*n_v
+					
 					#print(n0,x[i],xx_dd)
 					#print(n0 - xx_dd)
 					for i in range(len(add_y_a)):
@@ -495,16 +497,16 @@ def get_poly(position, radius, x, y, pole, lon_0):
 						y_n.append(add_y_a[i])
 					indexssort = np.argsort(add_y_a)
 					add_y_a = add_y_a[indexssort]
-					ds = get_ra(x[i],xx_dd)
-					n_v = ds / np.abs(ds)
-					#add_x_a = np.zeros(add_y_a.size) + x[i]
-					add_x_a = add_x_a[indexssort] + 0.1*n_v
+					
+					add_x_a = add_x_a[indexssort] - 0.1*n_v
+				
 					for i in range(len(add_y_a)):
 						
 						x_n.append(add_x_a[i])
 						y_n.append(add_y_a[i])
 					n0 = x[i]
 					y0 = y[i]
+
 			x = [tranlation_lon_0(x_n, -center_ra + 180)]
 			y = [np.array(y_n)]
 	else:
