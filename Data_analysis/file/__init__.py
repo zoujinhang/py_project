@@ -124,12 +124,12 @@ def findfile(dir1,feature):
 					#print('1----------',fileresult[eve])#------------------------
 					if (fil_result_number == 0):
 						print('we do not find any file that has the feature with [' + feature + ']!\n')
-						return (0)
+						return []
 					else:
 						fil_result_number = 0
 				else:
 					print('there is no file in this dir ! \n')
-					return 0
+					return []
 			else:
 				fe_number = len(featurelist[eve])
 				for i in fileresult[eve-1]:
@@ -142,7 +142,7 @@ def findfile(dir1,feature):
 							break
 				if (fil_result_number == 0):
 					print('we do not find any file that has the feature with [' + feature + ']!\n')
-					return (0)
+					return []
 				else:
 					fil_result_number = 0
 		return fileresult[for_number-1]
