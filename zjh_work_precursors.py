@@ -10,8 +10,8 @@ import pandas as pd
 
 
 #infor_link = '/home/laojin/my_work/zbb_Precursors/list.txt'
-#infor_link = '/home/laojin/my_work/zbb_Precursors/list1.txt'
-infor_link = '/home/laojin/my_work/zbb_Precursors/list3.txt'#bn150922234
+infor_link = '/home/laojin/my_work/zbb_Precursors/list1.txt'
+#infor_link = '/home/laojin/my_work/zbb_Precursors/list3.txt'#bn150922234
 #infor_link = '/home/laojin/my_work/zbb_Precursors/list2.txt'#bn191221802
 savedir = '/home/laojin/my_work/zbb_Precursors/result/'
 
@@ -78,25 +78,25 @@ for i in range(len(sample_list)):
 	if os.path.exists(savedir) == False:
 		os.makedirs(savedir)
 	#result = background_correction(t_c,rate_sm,edges,degree = 7,plot_save=savedir + 'Z_'+sample_list[i]+'_check.png')#bn191221802
-	#result = background_correction(t_c,rate_sm,edges,degree = 30,plot_save=savedir + 'Z_'+sample_list[i]+'_check.png')#bn101208498
+	result = background_correction(t_c,rate_sm,edges,degree = 30,plot_save=savedir + 'Z_'+sample_list[i]+'_check.png')#bn101208498
 	#result = background_correction(t_c,rate_sm,edges,degree = 7,plot_save=savedir + 'Z_'+sample_list[i]+'_check.png')
-	result = background_correction(t_c,rate_sm,edges,degree = 40,plot_save=savedir + 'Z_'+sample_list[i]+'_check.png')#bn150922234
+	#result = background_correction(t_c,rate_sm,edges,degree = 40,plot_save=savedir + 'Z_'+sample_list[i]+'_check.png')#bn150922234
 	c_rate = result['lc'][1]
 	sigma = result['bkg'][2]
 	re_rate = result['re_hist'][0]
 	#startedges,stopedges = get_bayesian_duration(result,sigma = 2)#bn191221802
 	#startedges,stopedges = get_bayesian_duration(result,sigma = 5)#bn101208498
-	startedges,stopedges = get_bayesian_duration(result,sigma = 5)
+	startedges,stopedges = get_bayesian_duration(result,sigma = 4)
 	w = np.ones(len(t_c))
 	for ij in range(len(startedges)):
 		#index_w = np.where((t_c>=startedges[ij]-dt)&(t_c<=stopedges[ij]+dt))[0]#bn101208498
 		index_w = np.where((t_c>=startedges[ij])&(t_c<=stopedges[ij]))[0]
 		w[index_w] = 0
 	
-	#result1 = accumulate_counts(t_c,c_rate*dt,np.sqrt(bin_n),w,startedges,stopedges,txx = 0.9,it = 100,lamd = 40/dt)#bn191221802
-	result1 = accumulate_counts(t_c,c_rate*dt,np.sqrt(bin_n),w,startedges,stopedges,txx = 0.9,it = 300,lamd = 10/dt)#bn150922234
-	#result1 = accumulate_counts(t_c,c_rate*dt,np.sqrt(bin_n),w,startedges-dt,stopedges+dt,txx = 0.9,it = 300,lamd = 20/dt)#bn101208498
-	#result1 = accumulate_counts(t_c,c_rate*dt,np.sqrt(bin_n),w,startedges,stopedges,txx = 0.9,it = 300,lamd = 70/dt)
+	#result1 = accumulate_counts(t_c,c_rate*dt,np.sqrt(bin_n),w,startedges,stopedges,txx = 0.9,it = 300,lamd = 30/dt)#bn191221802
+	#result1 = accumulate_counts(t_c,c_rate*dt,np.sqrt(bin_n),w,startedges,stopedges,txx = 0.9,it = 300,lamd = 70/dt)#bn150922234
+	result1 = accumulate_counts(t_c,c_rate*dt,np.sqrt(bin_n),w,startedges,stopedges,txx = 0.9,it = 300,lamd = 20/dt)#bn101208498
+	#result1 = accumulate_counts(t_c,c_rate*dt,np.sqrt(bin_n),w,startedges,stopedges,txx = 0.9,it = 300,lamd = 100/dt)
 	txx = result1['txx']
 	txx_err1 ,txx_err2 = result1['txx_err']
 	t1 = result1['t1']
