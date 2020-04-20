@@ -24,7 +24,7 @@ class WT_kernel(object):
 	def weight(self,x,x0,sigma):
 		rr = np.exp(-(x-x0)**2*sigma)
 		#rr = 1-sigma*(x-x0)**2
-		rr[rr<1e-22] = 0
+		#rr[rr<1e-22] = 0
 		return rr
 		#return np.exp(-(x-x0)**2*sigma)
 

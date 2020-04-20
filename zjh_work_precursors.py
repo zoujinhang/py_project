@@ -9,8 +9,8 @@ from astropy.stats import bayesian_blocks
 import pandas as pd
 
 
-#infor_link = '/home/laojin/my_work/zbb_Precursors/list.txt'
-infor_link = '/home/laojin/my_work/zbb_Precursors/list1.txt'
+infor_link = '/home/laojin/my_work/zbb_Precursors/list.txt'
+#infor_link = '/home/laojin/my_work/zbb_Precursors/list1.txt'
 #infor_link = '/home/laojin/my_work/zbb_Precursors/list3.txt'#bn150922234
 #infor_link = '/home/laojin/my_work/zbb_Precursors/list2.txt'#bn191221802
 savedir = '/home/laojin/my_work/zbb_Precursors/result/'
@@ -63,7 +63,7 @@ for i in range(len(sample_list)):
 		rate_sm = cs_rate+bs_rate.mean()
 		bin_n_sm = np.round(rate_sm*dt)
 		#edges = bayesian_blocks(t_c,bin_n_sm,fitness='events',gamma = np.exp(-3))#bn191221802
-		edges = bayesian_blocks(t_c,bin_n_sm,fitness='events',gamma = np.exp(-5))
+		edges = bayesian_blocks(t_c,bin_n,fitness='events',gamma = np.exp(-5))
 		dt = 0.01
 		bins = np.arange(start,stop+dt,dt)
 		bin_n,bin_edges = np.histogram(t,bins = bins)
@@ -78,16 +78,21 @@ for i in range(len(sample_list)):
 	if os.path.exists(savedir) == False:
 		os.makedirs(savedir)
 	#result = background_correction(t_c,rate_sm,edges,degree = 7,plot_save=savedir + 'Z_'+sample_list[i]+'_check.png')#bn191221802
-	result = background_correction(t_c,rate_sm,edges,degree = 30,plot_save=savedir + 'Z_'+sample_list[i]+'_check.png')#bn101208498
-	#result = background_correction(t_c,rate_sm,edges,degree = 7,plot_save=savedir + 'Z_'+sample_list[i]+'_check.png')
+	#result = background_correction(t_c,rate_sm,edges,degree = 30,plot_save=savedir + 'Z_'+sample_list[i]+'_check.png')#bn101208498
+	result = background_correction(t_c,rate_sm,edges,degree = 7,plot_save=savedir + 'Z_'+sample_list[i]+'_check.png')
 	#result = background_correction(t_c,rate_sm,edges,degree = 40,plot_save=savedir + 'Z_'+sample_list[i]+'_check.png')#bn150922234
 	c_rate = result['lc'][1]
 	sigma = result['bkg'][2]
 	re_rate = result['re_hist'][0]
+	re_hist_index = result['re_hist'][2]
 	#startedges,stopedges = get_bayesian_duration(result,sigma = 2)#bn191221802
 	#startedges,stopedges = get_bayesian_duration(result,sigma = 5)#bn101208498
 	startedges,stopedges = get_bayesian_duration(result,sigma = 4)
 	w = np.ones(len(t_c))
+	'''
+	for ij in re_hist_index:
+		w[ij] = 0
+	'''
 	for ij in range(len(startedges)):
 		#index_w = np.where((t_c>=startedges[ij]-dt)&(t_c<=stopedges[ij]+dt))[0]#bn101208498
 		index_w = np.where((t_c>=startedges[ij])&(t_c<=stopedges[ij]))[0]
@@ -95,8 +100,8 @@ for i in range(len(sample_list)):
 	
 	#result1 = accumulate_counts(t_c,c_rate*dt,np.sqrt(bin_n),w,startedges,stopedges,txx = 0.9,it = 300,lamd = 30/dt)#bn191221802
 	#result1 = accumulate_counts(t_c,c_rate*dt,np.sqrt(bin_n),w,startedges,stopedges,txx = 0.9,it = 300,lamd = 70/dt)#bn150922234
-	result1 = accumulate_counts(t_c,c_rate*dt,np.sqrt(bin_n),w,startedges,stopedges,txx = 0.9,it = 300,lamd = 20/dt)#bn101208498
-	#result1 = accumulate_counts(t_c,c_rate*dt,np.sqrt(bin_n),w,startedges,stopedges,txx = 0.9,it = 300,lamd = 100/dt)
+	#result1 = accumulate_counts(t_c,c_rate*dt,np.sqrt(bin_n),w,startedges,stopedges,txx = 0.9,it = 300,lamd = 20/dt)#bn101208498
+	result1 = accumulate_counts(t_c,c_rate*dt,np.sqrt(bin_n),w,startedges,stopedges,txx = 0.9,it = 300,lamd = 100/dt)
 	txx = result1['txx']
 	txx_err1 ,txx_err2 = result1['txx_err']
 	t1 = result1['t1']
@@ -106,7 +111,7 @@ for i in range(len(sample_list)):
 	news = {'t90':txx,"t90_err-":txx_err1,"t90_err+":txx_err2,'t90_1':t1,"t90_1_err-":t1_err1,
 	        "t90_1_err+":t1_err2,'t90_2':t2,"t90_2_err-":t2_err1,"t90_2_err+":t2_err2}
 	df = pd.DataFrame(news,columns=['t90',"t90_err-","t90_err+",'t90_1',"t90_1_err-", "t90_1_err+",'t90_2',"t90_2_err-","t90_2_err+"])
-	df.to_csv(savedir + 'C_'+sample_list[i]+'_T90.csv',index=False,float_format='%.2f')
+	df.to_csv(savedir + 'C_'+sample_list[i]+'_T90.csv',index=False,float_format='%.3f')
 	result1['time_edges'] = [startedges,stopedges]
 	result1['t_c'] = t_c
 	result1['rate'] = c_rate
