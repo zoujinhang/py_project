@@ -14,7 +14,7 @@ from astropy.stats import bayesian_blocks
 import re
 
 databaselink = '/media/laojin/Elements/trigdata/'
-yearlist = [2016]
+yearlist = [2015,2016,2017]
 
 
 def get_sample_dir_list(yearlist,databaselink):
@@ -126,9 +126,9 @@ def light_curve_analysis(file,NaI,BGO,good_ni,good_bi,txtdir,plotsave,plotsave1)
 					maxx = rate.max()
 				rate_sm = cs_rate+bs_rate.mean()
 				bin_n_sm = np.round(rate_sm*dt)
-				edges = bayesian_blocks(t_c,bin_n_sm,fitness='events',gamma = np.exp(-5))
+				edges = bayesian_blocks(t_c,bin_n_sm,fitness='events',gamma = np.exp(-6))
 				result = background_correction(t_c,rate_sm,edges,degree = 7)
-				startedges,stopedges = get_bayesian_duration(result,sigma = 5)
+				startedges,stopedges = get_bayesian_duration(result,sigma = 3)
 				new_c[ni + 'bb'] = [startedges,stopedges]
 				if len(startedges)>0:
 					if os.path.exists(txtdir) == False:
@@ -136,13 +136,14 @@ def light_curve_analysis(file,NaI,BGO,good_ni,good_bi,txtdir,plotsave,plotsave1)
 					myfile.printdatatofile(txtdir+'Z_'+ni+'_bayesian_duration.txt',data = [startedges,stopedges],format = ['.5f','.5f'])
 					flash_start,flash_stop = get_bayesian_flash(result,startedges,stopedges)
 					myfile.printdatatofile(txtdir+'Y_'+ni+'_bayesian_flash.txt',data = [flash_start,flash_stop],format = ['.5f','.5f'])
-					txx_result = get_bayesian_txx(result,startedges,stopedges,txx = 0.9,it = 400,lamd = 100.)
+					txx_result = get_bayesian_txx(result,startedges,stopedges,txx = 0.9,it = 400,lamd = 200.)
 					myplt = Plot(txx_result)
 					plt.title(ni)
 					myplt.plot_light_curve(sigma = 5)
 					plt.xlim(t[0],t[-1])
 					plt.savefig(txtdir + 'X_'+ni+'_bayesian_txx.png')
 					plt.close()
+					print('***********',len(txx_result['txx']),len(txx_result['txx_list']))
 					for ij in range(len(txx_result['txx'])):
 						plt.title(ni)
 						myplt.plot_distribution('90',num = ij)
@@ -387,7 +388,7 @@ def get_file(input_list,NaI,BGO):
 
 sample_dir_list = get_sample_dir_list(yearlist,databaselink)
 pool = Pool(2)
-pool.map(analysis_one_sample,sample_dir_list[:1])
+pool.map(analysis_one_sample,sample_dir_list)
 pool.close()
 pool.join()#主进程阻塞，等待子进程推出
 

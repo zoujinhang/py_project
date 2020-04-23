@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from .Baseline import WhittakerSmooth
+from ..Baseline import WhittakerSmooth
 
 def background_correction(t,rate,edges,backgroundsize = 10,degree = 5,plot_save = None):
 	'''
@@ -305,15 +305,15 @@ def get_bayesian_txx(data,t_start,t_stop,txx = 0.9,it = 400,lamd = 100.):
 	'''
 	
 	dt = data['dt']
-	lamd = lamd / dt**1.5
+	lamd = lamd / dt**2
 	t,rate = data['lc']
 	re_rate = data['re_hist'][0]
 	n = rate*dt
 	n_err = np.sqrt(n)
-	tmin_ = t_start[0]-10#------------------
+	tmin_ = t_start[0]-5#------------------
 	if tmin_<t[0]:
 		tmin_ = t[0]
-	tmax_ = t_stop[-1]+10#------------------
+	tmax_ = t_stop[-1]+6#------------------
 	if tmax_>t[-1]:
 		tmax_ = t[-1]
 	data_index = np.where((t>=tmin_)&(t<=tmax_))[0]
@@ -368,10 +368,10 @@ def get_bayesian_txx(data,t_start,t_stop,txx = 0.9,it = 400,lamd = 100.):
 			l1i = dd + csf_fit_list[index]
 			l2i = csf_fit_list[index+1] - dd
 			# ------------------------------------------------
-			if 3 * duration[index] > 10:
+			if 3 * duration[index] > 5:
 				bb = 3 * duration[index]
 			else:
-				bb = 10
+				bb = 5
 			t1_range1 = t_start[index] - bb
 			t2_range2 = t_stop[index] + bb
 			if index < len(t_start) - 1:
@@ -438,10 +438,10 @@ def get_bayesian_txx(data,t_start,t_stop,txx = 0.9,it = 400,lamd = 100.):
 						l11 = dd + csf_fit_list1[index]
 						l21 = csf_fit_list1[index + 1] - dd
 						
-						if 3*t90[index]>10:
+						if 3*t90[index]>5:
 							bb = 3*t90[index]
 						else:
-							bb = 10
+							bb = 5
 						t1_range1 = t_start[index]-bb
 						t1_range2 = t_start[index]+bb
 						t2_range1 = t_stop[index]-bb
@@ -524,14 +524,16 @@ def get_bayesian_txx(data,t_start,t_stop,txx = 0.9,it = 400,lamd = 100.):
 			t2_err2i = 0
 		t2_err1.append(t2_err1i)
 		t2_err2.append(t2_err2i)
+		new_t90_list.append(t90_list[i_index])
+		new_t1_list.append(t1_list[i_index])
 		new_t2_list.append(t2_list[i_index])
-
+		
 	result = {'good':True,'t_c':t,'rate':rate,'sigma':data['bkg'][2],'bs':WhittakerSmooth(rate,w,lambda_=lamd/dt),'bayesian_edges':[data['edges']],
 	          'bayesian_rate':[np.concatenate((re_rate[:1], re_rate))],
 		  'txx':t90,'txx_err':[t90_err1,t90_err2],
 		  't1':t1,'t2':t2,'t1_err':[t1_err1,t1_err2],'t2_err':[t2_err1,t2_err2],
 		  'txx_list':new_t90_list,'t1_list':new_t1_list,'t2_list':new_t2_list,
-		  'cs_f_max':fit_max,'cs_f':cs_f,
+		  'cs_f_max':fit_max,'cs_f':cs_f,'xx':str(int(100*txx)),
 		  't':t,'n':n,'bs_list':bs_list,'bs1':bs1,
 		  'l':[l1,l2]}
 	return result
