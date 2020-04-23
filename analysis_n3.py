@@ -6,7 +6,8 @@ from multiprocessing import Pool
 import Data_analysis.file as myfile
 from Data_analysis.geometry import Geometry,Detectors
 from Data_analysis import Time_transform,Separate_source,ch_to_energy,TD_baseline
-from Data_analysis import get_bayesian_flash,get_bayesian_duration,background_correction
+from Data_analysis import get_bayesian_flash,get_bayesian_duration,background_correction,get_bayesian_txx
+from Data_analysis import Plot,save_result
 import astropy.units as u
 from astropy.coordinates import SkyCoord
 from astropy.stats import bayesian_blocks
@@ -51,10 +52,10 @@ def analysis_one_sample(input_list):
 	
 	txt_savedir = savetop + year + '/' + sample +'/'
 	
-	all_duration_savedir = savetop + year + '/B_duration/B_'+sample+'_duration.png'
+	all_duration_savedir = savetop + year + '/A_duration/B_'+sample+'_duration.png'
 	duration_savedir = savetop + year + '/' + sample + '/B_duration.png'
 	
-	allcountmapdir = savetop + year + '/B_count_map/C_'+sample+'_countmap.png'
+	allcountmapdir = savetop + year + '/A_count_map/C_'+sample+'_countmap.png'
 	countmapdir = savetop + year + '/' + sample + '/C_countmap.png'
 	
 	if (files['trigdat'] is not None) and (files['loc'] is not None):
@@ -96,6 +97,10 @@ def light_curve_analysis(file,NaI,BGO,good_ni,good_bi,txtdir,plotsave,plotsave1)
 	dt = 0.064
 	maxx = 0
 	new_c = {}
+	if os.path.exists(txtdir) == False:
+		os.makedirs(txtdir)
+	myfile.printdatatofile(txtdir+'N_good_ni.txt',data = [good_ni])
+	myfile.printdatatofile(txtdir+'N_good_bi.txt',data = [good_bi])
 	for ni in NaI:
 		if file[ni] is not None:
 			hl = file[ni]
@@ -128,9 +133,33 @@ def light_curve_analysis(file,NaI,BGO,good_ni,good_bi,txtdir,plotsave,plotsave1)
 				if len(startedges)>0:
 					if os.path.exists(txtdir) == False:
 						os.makedirs(txtdir)
-					myfile.printdatatofile(txtdir+'Z'+ni+'_bayesian_duration.txt',data = [startedges,stopedges],format = ['.5f','.5f'])
+					myfile.printdatatofile(txtdir+'Z_'+ni+'_bayesian_duration.txt',data = [startedges,stopedges],format = ['.5f','.5f'])
 					flash_start,flash_stop = get_bayesian_flash(result,startedges,stopedges)
-					myfile.printdatatofile(txtdir+'Y'+ni+'_bayesian_flash.txt',data = [flash_start,flash_stop],format = ['.5f','.5f'])
+					myfile.printdatatofile(txtdir+'Y_'+ni+'_bayesian_flash.txt',data = [flash_start,flash_stop],format = ['.5f','.5f'])
+					txx_result = get_bayesian_txx(result,startedges,stopedges,txx = 0.9,it = 400,lamd = 100.)
+					myplt = Plot(txx_result)
+					plt.title(ni)
+					myplt.plot_light_curve(sigma = 5)
+					plt.xlim(t[0],t[-1])
+					plt.savefig(txtdir + 'X_'+ni+'_bayesian_txx.png')
+					plt.close()
+					for ij in range(len(txx_result['txx'])):
+						plt.title(ni)
+						myplt.plot_distribution('90',num = ij)
+						plt.savefig(txtdir + 'W_'+ni+'_distribution_'+str(ij)+'.png')
+						plt.close()
+					plt.figure(figsize = (10,10))
+					plt.subplot(2,1,1)
+					plt.title(ni)
+					myplt.plot_Txx1('90')
+					plt.xlim(t[0],t[-1])
+					plt.subplot(2,1,2)
+					myplt.plot_Txx2('90')
+					plt.xlim(t[0],t[-1])
+					plt.savefig(txtdir + 'U_'+ni+'_txx.png')
+					plt.close()
+					save_result(txx_result,txtdir+'V_'+ni+'_distribution_T90.csv')
+					
 				if (ni == good_ni[0]) :
 					ni_event = Separate_source(t,ch,ch_n1)
 					s_t,s_ch = ni_event.get_S_t_and_ch()
@@ -204,7 +233,7 @@ def light_curve_analysis(file,NaI,BGO,good_ni,good_bi,txtdir,plotsave,plotsave1)
 				if len(startedges)>0:
 					if os.path.exists(txtdir) == False:
 						os.makedirs(txtdir)
-					myfile.printdatatofile(txtdir+'Z'+bi+'_bayesian_duration.txt',data = [startedges,stopedges],format = ['.5f','.5f'])
+					myfile.printdatatofile(txtdir+'Z_'+bi+'_bayesian_duration.txt',data = [startedges,stopedges],format = ['.5f','.5f'])
 		else:
 			new_c[bi] = None
 	plt.figure(figsize=(30, 60))
@@ -357,7 +386,7 @@ def get_file(input_list,NaI,BGO):
 
 
 sample_dir_list = get_sample_dir_list(yearlist,databaselink)
-pool = Pool(1)
+pool = Pool(2)
 pool.map(analysis_one_sample,sample_dir_list[:1])
 pool.close()
 pool.join()#主进程阻塞，等待子进程推出

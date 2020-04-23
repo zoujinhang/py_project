@@ -292,7 +292,7 @@ def get_bayesian_flash(data,start_edges,stop_edges):
 		flash_stop.append(stop_edges[i])
 	return np.array(flash_start),np.array(flash_stop)
 	
-def get_bayesian_txx(data,t_start,t_stop,txx = 0.9,it = 1000,lamd = 100.):
+def get_bayesian_txx(data,t_start,t_stop,txx = 0.9,it = 400,lamd = 100.):
 	'''
 	
 	:param data:
@@ -303,16 +303,17 @@ def get_bayesian_txx(data,t_start,t_stop,txx = 0.9,it = 1000,lamd = 100.):
 	:param lamd:
 	:return:
 	'''
+	
 	dt = data['dt']
+	lamd = lamd / dt**1.5
 	t,rate = data['lc']
 	re_rate = data['re_hist'][0]
-	dt = t[1]-t[0]
 	n = rate*dt
 	n_err = np.sqrt(n)
-	tmin_ = t_start[0]-60*dt
+	tmin_ = t_start[0]-10#------------------
 	if tmin_<t[0]:
 		tmin_ = t[0]
-	tmax_ = t_stop[-1]+60*dt
+	tmax_ = t_stop[-1]+10#------------------
 	if tmax_>t[-1]:
 		tmax_ = t[-1]
 	data_index = np.where((t>=tmin_)&(t<=tmax_))[0]
