@@ -22,6 +22,7 @@ def get_sample_dir_list(yearlist,databaselink):
 	for year in yearlist:
 		topdir = databaselink + str(year) +'/'
 		dirlist1 = os.listdir(topdir)
+		dirlist1 = np.sort(dirlist1)
 		for dirl in dirlist1:
 			if os.path.isdir(topdir + dirl):
 				sample_dir_list.append([topdir + dirl+'/',dirl])
@@ -126,7 +127,7 @@ def light_curve_analysis(file,NaI,BGO,good_ni,good_bi,txtdir,plotsave,plotsave1)
 					maxx = rate.max()
 				rate_sm = cs_rate+bs_rate.mean()
 				bin_n_sm = np.round(rate_sm*dt)
-				edges = bayesian_blocks(t_c,bin_n_sm,fitness='events',gamma = np.exp(-6))
+				edges = bayesian_blocks(t_c,bin_n_sm,fitness='events',p0 = 0.05)
 				result = background_correction(t_c,rate_sm,edges,degree = 7)
 				startedges,stopedges = get_bayesian_duration(result,sigma = 3)
 				new_c[ni + 'bb'] = [startedges,stopedges]

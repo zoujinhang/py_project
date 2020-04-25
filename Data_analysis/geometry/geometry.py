@@ -189,13 +189,12 @@ class Geometry(object):
 		if show_bodies and self.sc_pos is not None:
 			#print('plot_earth!')
 			if projection in ['moll']:
+				
 				postion, r, lon, lat = self.get_earth_point(index=[index])[0]
-				lon_lis, lat_lis = get_poly(postion, r, lon, lat, pole,lon_0)
-				for i in range(len(lon_lis)):
-					x, y = map(lon_lis[i], lat_lis[i])
-					earth = Polygon(list(zip(x, y)), facecolor='#90d7ec', edgecolor='#90d7ec',
-					                linewidth=0, alpha=1)
-					ax.add_patch(earth)
+				#poly_list = get_circle(postion,r,lon_0,map,facecolor='#90d7ec',edgecolor='#90d7ec',linewidth=0, alpha=1)
+				poly_list = get_poly(postion, r, lon, lat,lon_0,map,facecolor='#90d7ec',edgecolor='#90d7ec',linewidth=0, alpha=1)
+				for i in poly_list:
+					ax.add_patch(i)
 			else:
 				postion, r, lon, lat = self.get_earth_point(index=[index])[0]
 				lon, lat = map(lon, lat)
@@ -221,17 +220,16 @@ class Geometry(object):
 				map.plot(sun_ra, sun_dec, 'o', color='#ffd400', markersize=40)
 				plt.text(sun_ra - 550000, sun_dec - 200000, 'sun', size=20)
 		
-		fovs = self.get_fov(centor,radius)
+		fovs = self.get_fov(centor, radius)
 		if projection in ['moll']:
 			for i,v in enumerate(index_):
 				r,ra,dec = fovs[i]
-				lon_lis, lat_lis = get_poly(centor[i],r,ra,dec,pole,lon_0)
 				#print(str(self.detectors.name_list[v]))
+				#poly_list = get_circle(centor[i],radius,lon_0,map,facecolor=self.detectors.color_list[v],edgecolor=self.detectors.color_list[v],linewidth=2, alpha=0.5)
+				poly_list = get_poly(centor[i],r,ra,dec,lon_0,map,facecolor='#90d7ec',edgecolor='#90d7ec',linewidth=0, alpha=1)
 				#print(lon_lis, lat_lis)
-				for ij in range(len(lon_lis)):
-					x,y = map(lon_lis[ij],lat_lis[ij])
-					detec = Polygon(list(zip(x,y)),facecolor=self.detectors.color_list[v],edgecolor=self.detectors.color_list[v],linewidth=2, alpha=0.5)
-					ax.add_patch(detec)
+				for ij in poly_list:
+					ax.add_patch(ij)
 				ra_x,dec_y = map(centor[i].ra.value+2.5,centor[i].dec.value-1)
 				plt.text(ra_x, dec_y,str(self.detectors.name_list[v]), color=self.detectors.color_list[v], size=22)
 		else:
@@ -306,13 +304,11 @@ class Geometry(object):
 				if projection in ['moll']:
 					
 					postion, r, lon, lat = earth_points_list[n]
-					lon_lis, lat_lis = get_poly(postion, r, lon, lat, pole, lon_0)
-					for i in range(len(lon_lis)):
-						x, y = map(lon_lis[i], lat_lis[i])
-						earth = Polygon(list(zip(x, y)), facecolor='#90d7ec',
-						                edgecolor='#90d7ec',
-						                linewidth=0, alpha=1)
-						ax.add_patch(earth)
+					#poly_list = get_circle(postion, r, lon_0, map, facecolor='#90d7ec',edgecolor='#90d7ec', linewidth=0, alpha=1)
+					poly_list = get_poly(postion, r, lon, lat, lon_0, map, facecolor='#90d7ec',edgecolor='#90d7ec', linewidth=0, alpha=1)
+					# lon_lis, lat_lis = get_poly(postion, r, lon, lat, pole,lon_0)
+					for i in poly_list:
+						ax.add_patch(i)
 				else:
 					postion, r, lon, lat = earth_points_list[n]
 					lon, lat = map(lon, lat)
@@ -340,11 +336,12 @@ class Geometry(object):
 			if projection in ['moll']:
 				for i,v in enumerate(index_):
 					r,ra,dec = fovs[i]
-					lon_lis, lat_lis = get_poly(centor[i],r,ra,dec,pole,lon_0)
-					for ij in range(len(lon_lis)):
-						x,y = map(lon_lis[ij],lat_lis[ij])
-						detec = Polygon(list(zip(x,y)),facecolor=color_list[v],edgecolor=color_list[v],linewidth=2, alpha=0.5)
-						ax.add_patch(detec)
+					#poly_list = get_circle(centor[i], radius, lon_0, map,facecolor=color_list[v],edgecolor=color_list[v], linewidth=2,alpha=0.5)
+					poly_list = get_poly(centor[i], r, ra, dec, lon_0, map, facecolor='#90d7ec',edgecolor='#90d7ec', linewidth=0, alpha=1)
+					# print(str(self.detectors.name_list[v]))
+					# print(lon_lis, lat_lis)
+					for ij in poly_list:
+						ax.add_patch(ij)
 					ra_x,dec_y = map(centor[i].ra.value+2.5,centor[i].dec.value-1)
 					plt.text(ra_x, dec_y,str(name_list[v]), color=color_list[v], size=22)
 			else:
@@ -399,10 +396,10 @@ def tranlation_lon_0(rad, lon_0):
 
 def judge(x,n,xxdd,xxdd180):
 	d_ra = np.abs(get_ra(x,n))
-	case1 = (x>xxdd)&(xxdd>180)&(n<=xxdd)&(n>xxdd180)&(d_ra<90)
-	case2 = (n>xxdd)&(xxdd>180)&(x<=xxdd)&(x>xxdd180)&(d_ra<90)
-	case3 = (x<xxdd180)&(x>=xxdd)&(xxdd<=180)&(n<xxdd)&(d_ra<90)
-	case4 = (n<xxdd180)&(n>=xxdd)&(xxdd<=180)&(x<xxdd)&(d_ra<90)
+	case1 = (x>xxdd)&(xxdd>180)&(n<=xxdd)&(n>xxdd180)&(d_ra<20)
+	case2 = (n>xxdd)&(xxdd>180)&(x<=xxdd)&(x>xxdd180)&(d_ra<20)
+	case3 = (x<xxdd180)&(x>=xxdd)&(xxdd<=180)&(n<xxdd)&(d_ra<20)
+	case4 = (n<xxdd180)&(n>=xxdd)&(xxdd<=180)&(x<xxdd)&(d_ra<20)
 	return case1|case2|case3|case4
 
 def get_ra(x,x0):
@@ -411,21 +408,235 @@ def get_ra(x,x0):
 	dx = xar - x0
 	dxabs = np.abs(dx)
 	return dx[np.argmin(dxabs)]
+def get_circle(position,radius,lon_0,map_,facecolor='coral', edgecolor='coral',linewidth=0., alpha=1.):
+	'''
+	
+	:param position:
+	:param radius:
+	:param lon_0:
+	:param map_:
+	:param facecolor:
+	:param edgecolor:
+	:param linewidth:
+	:param alpha:
+	:return:
+	'''
+	x0 = position.ra.value
+	y0 = position.dec.value
+	xx_dd = tranlation_lon_0([lon_0 - 180],x0 - 180)[0]
+	poly = SphericalPolygon.from_cone(180,y0,radius,steps=200)
+	x,y = [p for p in poly.to_radec()][0]
+	
+	poly_arr = np.array([89.9999,-89.9999])
+	d_deg = np.abs(poly_arr-y0)
+	d_l = poly_arr[d_deg<radius]
 
-def get_poly(position, radius, x, y, pole, lon_0):
+	add_x = np.zeros(100) + xx_dd
+	add_y = np.linspace(-89.9999, 89.9999, 100)
+	if d_l.size > 0:
+		xx_dd180 = loop_data([xx_dd+180])[0]
+		#print('pole_in.size > 0')
+		if d_l[0] == 89.9999:
+			#print('pole_in.dec.deg == 90.')
+			x_n = []
+			y_n = []
+			n0 = x[0]
+			y0 = y[0]
+			for i in range(1, len(x)):
+				
+				if judge(x[i],n0,xx_dd,xx_dd180) == False :
+					x_n.append(x[i])
+					y_n.append(y[i])
+					n0 = x[i]
+					y0 = y[i]
+				else:
+					#print(x[i],n0,xx_dd,xx_dd180)
+					#print('nnn0',n0,y0)
+					#print('xxxi',x[i],y[i])
+					indexs = np.where(add_y >= y0)[0]
+					add_y_a = add_y[indexs]
+					add_x_a = add_x[indexs]
+					indexssort = np.argsort(add_y_a)
+					ds = get_ra(n0,x[i])
+					n_v = ds / np.abs(ds)
+					#print('n_v',n_v)
+					add_y_a1 = add_y_a[indexssort]
+					add_x_a1 = add_x_a[indexssort] + 0.1*n_v
+					#print('add_x',add_x_a,add_y_a)
+					#print(n0,x[i],xx_dd)
+					#print(n0 - xx_dd)
+					for i in range(len(add_y_a1)):
+						x_n.append(add_x_a1[i])
+						y_n.append(add_y_a1[i])
+					indexssort = np.argsort(-add_y_a)
+					add_y_a2 = add_y_a[indexssort]
+					add_x_a2 = add_x_a[indexssort] - 0.1*n_v
+					#print('add_x',add_x_a,add_y_a)
+					for i in range(len(add_y_a2)):
+						x_n.append(add_x_a2[i])
+						y_n.append(add_y_a2[i])
+					n0 = x[i]
+					y0 = y[i]
+			#print(x_n)
+			#print(y_n)
+			x = [tranlation_lon_0(x_n, -x0 + 180)]
+			y = [np.array(y_n)]
+		else:
+			#print('pole_in.dec.deg == 90. else')
+			x_n = []
+			y_n = []
+			n0 = x[0]
+			y0 = y[0]
+			
+			for i in range(1, len(x)):
+				if judge(x[i],n0,xx_dd,xx_dd180) == False:
+					
+					x_n.append(x[i])
+					y_n.append(y[i])
+					n0 = x[i]
+					y0 = y[i]
+				else:
+					#print('dddddd',x[i],n0,xx_dd,xx_dd180)
+					#print(i)
+					indexs = np.where(add_y <= y0)[0]
+					add_y_a = add_y[indexs]
+					#add_x_a = np.zeros(add_y_a.size) + n0
+					add_x_a = add_x[indexs]
+					indexssort = np.argsort(-add_y_a)
+					ds = get_ra(n0,x[i])
+					n_v = ds / np.abs(ds)
+					add_y_a1 = add_y_a[indexssort]
+					add_x_a1 = add_x_a[indexssort]+0.1*n_v
+					
+					#print(n0,x[i],xx_dd)
+					#print(n0 - xx_dd)
+					for i in range(len(add_y_a1)):
+						#pass
+						x_n.append(add_x_a1[i])
+						y_n.append(add_y_a1[i])
+					indexssort = np.argsort(add_y_a)
+					add_y_a2 = add_y_a[indexssort]
+					add_x_a2 = add_x_a[indexssort] - 0.1*n_v
+				
+					for i in range(len(add_y_a2)):
+						x_n.append(add_x_a2[i])
+						y_n.append(add_y_a2[i])
+					n0 = x[i]
+					y0 = y[i]
+
+			x = [tranlation_lon_0(x_n, -x0 + 180)]
+			y = [np.array(y_n)]
+	else:
+		#print('pole_in.size > 0 else')
+		x_1 = []
+		y_1 = []
+		x_2 = []
+		y_2 = []
+		
+		if len(x[x > xx_dd]) > len(x[x <= xx_dd]):
+			#print('len(x[x > xx_dd]) > len(x[x <= xx_dd])')
+			if len(x[x <= xx_dd]) > 0:
+				#print('len(x[x <= xx_dd]) > 0')
+				# x大于xx_dd
+				for i in range(len(x)):
+					# x小于xx_dd一律等于xx_dd+0.1
+					if x[i] <= xx_dd:
+						x_1.append(xx_dd + 0.1)
+						y_1.append(y[i])
+					else:
+						x_1.append(x[i])
+						y_1.append(y[i])
+				
+				aa = y[x <= xx_dd]
+				amax = aa.max()
+				amin = aa.min()
+				for i in range(len(x)):
+					# x大于xx_dd一律等于xx_dd-0.1
+					if x[i] >= xx_dd:
+						x_2.append(xx_dd - 0.1)
+						if y[i] > amax:
+							y_2.append(amax)
+						elif y[i] < amin:
+							y_2.append(amin)
+						else:
+							y_2.append(y[i])
+					else:
+						x_2.append(x[i])
+						if y[i] > amax:
+							y_2.append(amax)
+						elif y[i] < amin:
+							y_2.append(amin)
+						else:
+							y_2.append(y[i])
+				x = [tranlation_lon_0(x_1, -x0 + 180),
+				     tranlation_lon_0(x_2, -x0 + 180)]
+				y = [np.array(y_1), np.array(y_2)]
+			else:
+				x = [tranlation_lon_0(x, -x0 + 180)]
+				y = [y]
+		else:
+			#print('len(x[x > xx_dd]) > len(x[x <= xx_dd]) else')
+			if len(x[x > xx_dd]) > 0:
+				#print('len(x[x > xx_dd]) > 0')
+				# 小于xx_dd为主
+				for i in range(len(x)):
+					if x[i] >= xx_dd:
+						x_1.append(xx_dd - 0.1)
+						y_1.append(y[i])
+					else:
+						x_1.append(x[i])
+						y_1.append(y[i])
+				
+				aa = y[x >= xx_dd]
+				amax = aa.max()
+				amin = aa.min()
+				for i in range(len(x)):
+					if x[i] <= xx_dd:
+						x_2.append(xx_dd + 0.1)
+						if y[i] > amax:
+							y_2.append(amax)
+						elif y[i] < amin:
+							y_2.append(amin)
+						else:
+							y_2.append(y[i])
+					else:
+						x_2.append(x[i])
+						if y[i] > amax:
+							y_2.append(amax)
+						elif y[i] < amin:
+							y_2.append(amin)
+						else:
+							y_2.append(y[i])
+				x = [tranlation_lon_0(x_1, -x0 + 180),
+				     tranlation_lon_0(x_2, -x0 + 180)]
+				y = [np.array(y_1), np.array(y_2)]
+			else:
+				#print('len(x[x > xx_dd]) > 0 else')
+				x = [tranlation_lon_0(x, -x0 + 180)]
+				y = [y]
+	poly_list = []
+	for i in range(len(x)):
+		x_, y_ = map_(x[i], y[i])
+		poly1 = Polygon(list(zip(x_, y_)), facecolor=facecolor, edgecolor=edgecolor,linewidth=linewidth, alpha=alpha)
+		poly_list.append(poly1)
+	return poly_list
+	
+def get_poly(position, radius, x, y, lon_0,map_,facecolor='coral', edgecolor='coral',linewidth=0., alpha=1.):
 	x = np.array(x)
 	y = np.array(y)
 	center_ra = position.ra.value
+	center_dec = position.dec.value
 	xx_dd = tranlation_lon_0([lon_0 - 180], center_ra - 180)[0]
 	x = tranlation_lon_0(x, center_ra - 180)
-	inde = pole.separation(position) <= radius * u.degree
-	pole_in = pole[inde]
+	poly_arr = np.array([89.9999, -89.9999])
+	d_deg = np.abs(poly_arr - center_dec)
+	d_l = poly_arr[d_deg < radius]
 	add_x = np.zeros(100) + xx_dd
 	add_y = np.linspace(-89.9999, 89.9999, 100)
-	if pole_in.size > 0:
+	if d_l.size > 0:
 		xx_dd180 = loop_data([xx_dd+180])[0]
 		#print('pole_in.size > 0')
-		if pole_in.dec.deg == 90.:
+		if d_l[0] == 89.9999:
 			#print('pole_in.dec.deg == 90.')
 			x_n = []
 			y_n = []
@@ -446,18 +657,18 @@ def get_poly(position, radius, x, y, pole, lon_0):
 					indexssort = np.argsort(add_y_a)
 					ds = get_ra(n0,x[i])
 					n_v = ds / np.abs(ds)
-					add_y_a = add_y_a[indexssort]
-					add_x_a = add_x_a[indexssort] + 0.1*n_v
-					for i in range(len(add_y_a)):
-						x_n.append(add_x_a[i])
-						y_n.append(add_y_a[i])
+					add_y_a1 = add_y_a[indexssort]
+					add_x_a1 = add_x_a[indexssort] + 0.1*n_v
+					for i in range(len(add_y_a1)):
+						x_n.append(add_x_a1[i])
+						y_n.append(add_y_a1[i])
 					indexssort = np.argsort(-add_y_a)
-					add_y_a = add_y_a[indexssort]
+					add_y_a2 = add_y_a[indexssort]
 					
-					add_x_a = add_x_a[indexssort] - 0.1*n_v
-					for i in range(len(add_y_a)):
-						x_n.append(add_x_a[i])
-						y_n.append(add_y_a[i])
+					add_x_a2 = add_x_a[indexssort] - 0.1*n_v
+					for i in range(len(add_y_a2)):
+						x_n.append(add_x_a2[i])
+						y_n.append(add_y_a2[i])
 					n0 = x[i]
 					y0 = y[i]
 			x = [tranlation_lon_0(x_n, -center_ra + 180)]
@@ -484,26 +695,26 @@ def get_poly(position, radius, x, y, pole, lon_0):
 					#add_x_a = np.zeros(add_y_a.size) + n0
 					add_x_a = add_x[indexs]
 					indexssort = np.argsort(-add_y_a)
-					add_y_a = add_y_a[indexssort]
+					add_y_a1 = add_y_a[indexssort]
 					ds = get_ra(n0,x[i])
 					n_v = ds / np.abs(ds)
-					add_x_a = add_x_a[indexssort]+0.1*n_v
+					add_x_a1 = add_x_a[indexssort]+0.1*n_v
 					
 					#print(n0,x[i],xx_dd)
 					#print(n0 - xx_dd)
-					for i in range(len(add_y_a)):
+					for i in range(len(add_y_a1)):
 						#pass
-						x_n.append(add_x_a[i])
-						y_n.append(add_y_a[i])
+						x_n.append(add_x_a1[i])
+						y_n.append(add_y_a1[i])
 					indexssort = np.argsort(add_y_a)
-					add_y_a = add_y_a[indexssort]
+					add_y_a2 = add_y_a[indexssort]
 					
-					add_x_a = add_x_a[indexssort] - 0.1*n_v
+					add_x_a2 = add_x_a[indexssort] - 0.1*n_v
 				
-					for i in range(len(add_y_a)):
+					for i in range(len(add_y_a2)):
 						
-						x_n.append(add_x_a[i])
-						y_n.append(add_y_a[i])
+						x_n.append(add_x_a2[i])
+						y_n.append(add_y_a2[i])
 					n0 = x[i]
 					y0 = y[i]
 
@@ -597,4 +808,9 @@ def get_poly(position, radius, x, y, pole, lon_0):
 				#print('len(x[x > xx_dd]) > 0 else')
 				x = [tranlation_lon_0(x, -center_ra + 180)]
 				y = [y]
-	return x, y
+	poly_list = []
+	for i in range(len(x)):
+		x_, y_ = map_(x[i], y[i])
+		poly1 = Polygon(list(zip(x_, y_)), facecolor=facecolor, edgecolor=edgecolor,linewidth=linewidth, alpha=alpha)
+		poly_list.append(poly1)
+	return poly_list
