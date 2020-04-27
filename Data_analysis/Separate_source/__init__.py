@@ -12,8 +12,9 @@ class Separate_source(object):
 
 	'''
 	def __init__(self,t,ch,ch_n,
-		     time_range = None
-		     ):
+		     time_range = None,
+		     WT = True
+	             ):
 
 		if time_range is None:
 			self.time_start = t[0]
@@ -27,6 +28,7 @@ class Separate_source(object):
 			self.ch = ch[np.where((t>=self.time_start)&(t<=self.time_stop))]
 		#self.t = t
 		#self.ch = ch
+		self.WT = WT
 		self.ch_n = ch_n
 		self.get_background()
 		self.check_background()
@@ -36,8 +38,10 @@ class Separate_source(object):
 		if len(t) == 0:
 			return np.array([]),np.array([])
 		Era = Event_rate_analysis(t,time_range=[self.time_start,self.time_stop])
-		GPS = Era.get_wt_GPS()
-		#GPS = Era.get_GPS()
+		if self.WT:
+			GPS = Era.get_wt_GPS()
+		else:
+			GPS = Era.get_GPS()
 		BPS = Era.get_BPS()
 		#print('GPS \n',GPS)
 		#print('BPS \n',BPS)

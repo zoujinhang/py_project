@@ -137,6 +137,7 @@ def light_curve_analysis(file,NaI,BGO,good_ni,good_bi,txtdir,plotsave,plotsave1)
 					myfile.printdatatofile(txtdir+'Z_'+ni+'_bayesian_duration.txt',data = [startedges,stopedges],format = ['.5f','.5f'])
 					flash_start,flash_stop = get_bayesian_flash(result,startedges,stopedges)
 					myfile.printdatatofile(txtdir+'Y_'+ni+'_bayesian_flash.txt',data = [flash_start,flash_stop],format = ['.5f','.5f'])
+					'''
 					txx_result = get_bayesian_txx(result,startedges,stopedges,txx = 0.9,it = 400,lamd = 200.)
 					myplt = Plot(txx_result)
 					plt.title(ni)
@@ -161,9 +162,9 @@ def light_curve_analysis(file,NaI,BGO,good_ni,good_bi,txtdir,plotsave,plotsave1)
 					plt.savefig(txtdir + 'U_'+ni+'_txx.png')
 					plt.close()
 					save_result(txx_result,txtdir+'V_'+ni+'_distribution_T90.csv')
-					
+					'''
 				if (ni == good_ni[0]) :
-					ni_event = Separate_source(t,ch,ch_n1)
+					ni_event = Separate_source(t,ch,ch_n1,WT=False)
 					s_t,s_ch = ni_event.get_S_t_and_ch()
 					new_t,new_energy = ch_to_energy(s_t,s_ch,ch_n,e1,e2)
 					fig = plt.figure(figsize = (20,20))

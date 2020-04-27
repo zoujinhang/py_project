@@ -231,7 +231,8 @@ def get_bayesian_duration(data,sigma = 5):
 				stop_edges.append(binstart[index])
 				start_tag = False
 	if start_tag:
-		start_edges.pop()
+		if len(start_edges)>0:
+			start_edges.pop()
 	#print(start_edges)
 	if len(start_edges)>0:
 		if start_edges[0] == binstart[0]:
@@ -311,10 +312,13 @@ def get_bayesian_txx(data,t_start,t_stop,txx = 0.9,it = 400,lamd = 100.):
 	re_rate = data['re_hist'][0]
 	n = rate*dt
 	n_err = np.sqrt(n)
-	tmin_ = t_start[0]-5#------------------
+	dif = np.array(t_stop) - np.array(t_start)
+	dif[dif > 20] = 20
+	dif[dif <5] = 5
+	tmin_ = t_start[0]-dif[0]#------------------
 	if tmin_<t[0]:
 		tmin_ = t[0]
-	tmax_ = t_stop[-1]+6#------------------
+	tmax_ = t_stop[-1]+dif[-1]#------------------
 	if tmax_>t[-1]:
 		tmax_ = t[-1]
 	data_index = np.where((t>=tmin_)&(t<=tmax_))[0]

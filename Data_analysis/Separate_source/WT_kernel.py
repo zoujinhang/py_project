@@ -14,6 +14,7 @@ class WT_kernel(object):
 		rate = 1.0/self.wt
 		w = np.ones(rate.size)
 		self.rate = WhittakerSmooth(rate,w,2)
+		
 
 	def get_wt(self):
 		return self.wt
@@ -23,8 +24,9 @@ class WT_kernel(object):
 
 	def weight(self,x,x0,sigma):
 		rr = np.exp(-(x-x0)**2*sigma)
-		#rr = 1-sigma*(x-x0)**2
-		#rr[rr<1e-22] = 0
+		#if self.fast:
+		#	rr = 1-sigma*(x-x0)**2
+		#	rr[rr<1e-22] = 0
 		return rr
 		#return np.exp(-(x-x0)**2*sigma)
 

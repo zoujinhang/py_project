@@ -9,10 +9,15 @@ from astropy.stats import bayesian_blocks
 import pandas as pd
 
 
-infor_link = '/home/laojin/my_work/zbb_Precursors/list.txt'
+#infor_link = '/home/laojin/my_work/zbb_Precursors/list.txt'
 #infor_link = '/home/laojin/my_work/zbb_Precursors/list1.txt'
 #infor_link = '/home/laojin/my_work/zbb_Precursors/list3.txt'#bn150922234
 #infor_link = '/home/laojin/my_work/zbb_Precursors/list2.txt'#bn191221802
+#infor_link = '/home/laojin/my_work/zbb_Precursors/list4.txt'#bn170709334
+#infor_link = '/home/laojin/my_work/zbb_Precursors/list5.txt'#bn150604434
+infor_link = '/home/laojin/my_work/zbb_Precursors/list6.txt'#bn180511437
+
+
 savedir = '/home/laojin/my_work/zbb_Precursors/result/'
 
 sample_list,dete_list,year_list,el,eu,tl,tu = myfile.readcol(infor_link)
@@ -37,8 +42,9 @@ for i in range(len(sample_list)):
 	e2 = hl[1].data.field(2)
 	t = time - trigtime
 	t, e = ch_to_energy(t, ch, ch_n, e1, e2)
-	e_index = np.where((e >= el[i]) & (e <= eu[i]))[0]
+	e_index = np.where((e >= 10) & (e <= 1000))[0]
 	t = t[e_index]
+	e = e[e_index]
 	edges_name = myfile.findfile('/home/laojin/my_work/zbb_Precursors/',edges_file)
 	print(edges_name)
 	if edges_name is not False and len(edges_name)>0:
@@ -54,16 +60,29 @@ for i in range(len(sample_list)):
 		rate_sm = cs_rate+bs_rate.mean()
 		bin_n_sm = np.round(rate_sm*dt)
 	else:
-		dt = 0.064
+		#dt = 0.05#bn180511437
+		dt = 0.046
 		bins = np.arange(start,stop+dt,dt)
-		bin_n,bin_edges = np.histogram(t,bins = bins)
+		if sample_list[i] in ['bn191221802']:
+			print('in',['bn191221802'])
+			e_index = np.where((e >= el[i]) & (e <= eu[i]))[0]
+			t1 = t[e_index]
+		else:
+			t1 = t
+		bin_n,bin_edges = np.histogram(t1,bins = bins)
 		rate = bin_n/dt
 		t_c = (bin_edges[1:]+bin_edges[:-1])*0.5
 		t_c,cs_rate,bs_rate = TD_baseline(t_c,rate)
 		rate_sm = cs_rate+bs_rate.mean()
 		bin_n_sm = np.round(rate_sm*dt)
+		t_index = np.where((t>=start)&(t<=stop+dt))[0]
+		ti = t[t_index]
 		#edges = bayesian_blocks(t_c,bin_n_sm,fitness='events',gamma = np.exp(-3))#bn191221802
-		edges = bayesian_blocks(t_c,bin_n,fitness='events',gamma = np.exp(-5))
+		#edges = bayesian_blocks(t_c,bin_n,fitness='events',gamma = np.exp(-3))#bn101208498
+		#edges = bayesian_blocks(t_c,bin_n,fitness='events',gamma = np.exp(-3))#bn170709334
+		#edges = bayesian_blocks(t_c,bin_n,fitness='events',gamma = np.exp(-5))#bn150604434
+		edges = bayesian_blocks(ti,fitness='events',p0=0.1)#bn180511437
+		#edges = bayesian_blocks(t_c,bin_n,fitness='events',gamma = np.exp(-5))
 		dt = 0.01
 		bins = np.arange(start,stop+dt,dt)
 		bin_n,bin_edges = np.histogram(t,bins = bins)
@@ -79,15 +98,17 @@ for i in range(len(sample_list)):
 		os.makedirs(savedir)
 	#result = background_correction(t_c,rate_sm,edges,degree = 7,plot_save=savedir + 'Z_'+sample_list[i]+'_check.png')#bn191221802
 	#result = background_correction(t_c,rate_sm,edges,degree = 30,plot_save=savedir + 'Z_'+sample_list[i]+'_check.png')#bn101208498
-	result = background_correction(t_c,rate_sm,edges,degree = 7,plot_save=savedir + 'Z_'+sample_list[i]+'_check.png')
+	result = background_correction(t_c,rate_sm,edges,degree = 10,plot_save=savedir + 'Z_'+sample_list[i]+'_check.png')
 	#result = background_correction(t_c,rate_sm,edges,degree = 40,plot_save=savedir + 'Z_'+sample_list[i]+'_check.png')#bn150922234
 	c_rate = result['lc'][1]
 	sigma = result['bkg'][2]
 	re_rate = result['re_hist'][0]
 	re_hist_index = result['re_hist'][2]
 	#startedges,stopedges = get_bayesian_duration(result,sigma = 2)#bn191221802
-	#startedges,stopedges = get_bayesian_duration(result,sigma = 5)#bn101208498
-	startedges,stopedges = get_bayesian_duration(result,sigma = 4)
+	#startedges,stopedges = get_bayesian_duration(result,sigma = 3)#bn101208498
+	#startedges,stopedges = get_bayesian_duration(result,sigma = 5)#bn150604434
+	startedges,stopedges = get_bayesian_duration(result,sigma = 5)#bn180511437
+	#startedges,stopedges = get_bayesian_duration(result,sigma = 4)
 	w = np.ones(len(t_c))
 	'''
 	for ij in re_hist_index:
@@ -98,10 +119,11 @@ for i in range(len(sample_list)):
 		index_w = np.where((t_c>=startedges[ij])&(t_c<=stopedges[ij]))[0]
 		w[index_w] = 0
 	
-	#result1 = accumulate_counts(t_c,c_rate*dt,np.sqrt(bin_n),w,startedges,stopedges,txx = 0.9,it = 300,lamd = 30/dt)#bn191221802
-	#result1 = accumulate_counts(t_c,c_rate*dt,np.sqrt(bin_n),w,startedges,stopedges,txx = 0.9,it = 300,lamd = 70/dt)#bn150922234
-	#result1 = accumulate_counts(t_c,c_rate*dt,np.sqrt(bin_n),w,startedges,stopedges,txx = 0.9,it = 300,lamd = 20/dt)#bn101208498
-	result1 = accumulate_counts(t_c,c_rate*dt,np.sqrt(bin_n),w,startedges,stopedges,txx = 0.9,it = 300,lamd = 100/dt)
+	#result1 = accumulate_counts(t_c,c_rate*dt,np.sqrt(bin_n),w,startedges,stopedges,txx = 0.9,it = 300,lamd = 20)#bn191221802
+	#result1 = accumulate_counts(t_c,c_rate*dt,np.sqrt(bin_n),w,startedges,stopedges,txx = 0.9,it = 300,lamd = 70)#bn150922234
+	#result1 = accumulate_counts(t_c,c_rate*dt,np.sqrt(bin_n),w,startedges,stopedges,txx = 0.9,it = 300,lamd = 20)#bn101208498
+	result1 = accumulate_counts(t_c,c_rate*dt,np.sqrt(bin_n),w,startedges,stopedges,txx = 0.9,it = 300,lamd = 10)#bn180511437
+	#result1 = accumulate_counts(t_c,c_rate*dt,np.sqrt(bin_n),w,startedges,stopedges,txx = 0.9,it = 300,lamd = 20)
 	txx = result1['txx']
 	txx_err1 ,txx_err2 = result1['txx_err']
 	t1 = result1['t1']
@@ -115,7 +137,7 @@ for i in range(len(sample_list)):
 	result1['time_edges'] = [startedges,stopedges]
 	result1['t_c'] = t_c
 	result1['rate'] = c_rate
-	result1['bs'] = WhittakerSmooth(c_rate,w,lambda_=100/dt)
+	result1['bs'] = WhittakerSmooth(c_rate,w,lambda_=100/dt**2)
 	result1['good'] = True
 	result1['sigma'] = sigma
 	result1['bayesian_edges'] = [edges]
