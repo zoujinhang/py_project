@@ -226,7 +226,7 @@ class Geometry(object):
 				r,ra,dec = fovs[i]
 				#print(str(self.detectors.name_list[v]))
 				#poly_list = get_circle(centor[i],radius,lon_0,map,facecolor=self.detectors.color_list[v],edgecolor=self.detectors.color_list[v],linewidth=2, alpha=0.5)
-				poly_list = get_poly(centor[i],r,ra,dec,lon_0,map,facecolor=self.detectors.color_list[v],edgecolor=self.detectors.color_list[v],linewidth=0, alpha=1)
+				poly_list = get_poly(centor[i],r,ra,dec,lon_0,map,facecolor=self.detectors.color_list[v],edgecolor=self.detectors.color_list[v],linewidth=2, alpha=0.5)
 				#print(lon_lis, lat_lis)
 				for ij in poly_list:
 					ax.add_patch(ij)
@@ -337,7 +337,7 @@ class Geometry(object):
 				for i,v in enumerate(index_):
 					r,ra,dec = fovs[i]
 					#poly_list = get_circle(centor[i], radius, lon_0, map,facecolor=color_list[v],edgecolor=color_list[v], linewidth=2,alpha=0.5)
-					poly_list = get_poly(centor[i], r, ra, dec, lon_0, map, facecolor=color_list[v],edgecolor=color_list[v], linewidth=0, alpha=1)
+					poly_list = get_poly(centor[i], r, ra, dec, lon_0, map, facecolor=color_list[v],edgecolor=color_list[v], linewidth=2, alpha=0.5)
 					# print(str(self.detectors.name_list[v]))
 					# print(lon_lis, lat_lis)
 					for ij in poly_list:

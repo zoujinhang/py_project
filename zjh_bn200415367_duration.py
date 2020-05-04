@@ -32,7 +32,7 @@ for i in e_lin:
 	
 	t_start = -0.5
 	t_stop = 0.5
-	result = get_txx(t,binsize = 0.002,time_edges=[t_start,t_stop],background_degree=7,sigma = 4,txx = 0.9,it = 300,p0 = 0.05,plot_check=savedir + 'Z_bn200415367_'+str(i[0])+'_'+str(i[1])+'_check.png',hardnss=100)
+	result = get_txx(t,binsize = 0.064,time_edges=[t_start,t_stop],background_degree=7,sigma = 4,txx = 0.9,it = 300,p0 = 0.05,plot_check=savedir + 'Z_bn200415367_'+str(i[0])+'_'+str(i[1])+'_check.png',hardnss=100)
 	save_result(result,savedir + 'C_bn200415367_'+str(i[0])+'_'+str(i[1])+'_T90.csv',float_format='%.3f')
 	myplt = Plot(result)
 	plt.title('GRB200415367 '+str(i[0])+'--'+str(i[1])+' kev')

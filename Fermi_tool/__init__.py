@@ -6,15 +6,12 @@ from multiprocessing import Pool
 import Data_analysis.file as myfile
 from Data_analysis.geometry import Geometry,Detectors
 from Data_analysis import Time_transform,Separate_source,ch_to_energy,TD_baseline
-from Data_analysis import get_bayesian_flash,get_bayesian_duration,background_correction,get_bayesian_txx
+from Data_analysis import get_bayesian_flash,get_bayesian_duration,background_correction,get_bayesian_txx,re_histogram
 from Data_analysis import Plot,save_result
 import astropy.units as u
 from astropy.coordinates import SkyCoord
 from astropy.stats import bayesian_blocks
 import re
-
-databaselink = '/media/laojin/Elements/trigdata/'
-yearlist = [2015,2016,2017]
 
 
 def get_sample_dir_list(yearlist,databaselink):
@@ -28,73 +25,7 @@ def get_sample_dir_list(yearlist,databaselink):
 				sample_dir_list.append([topdir + dirl+'/',dirl])
 	return sample_dir_list
 
-
-
-def analysis_one_sample(input_list):
-	'''
-	
-	:param input_list:
-	:return:
-	'''
-	
-	NaI = ['n0','n1','n2','n3','n4','n5','n6','n7','n8','n9','na','nb']
-	BGO = ['b0','b1']
-	sample = input_list[1]
-	sampledir = input_list[0]
-	ll = re.split('[/]',sampledir)
-	year = ll[-3]
-	files = get_file(input_list,NaI,BGO)
-	savetop = '/home/laojin/result/catalog/'
-	all_sky_map = savetop + year + '/A_skymap/D_'+sample+'_skymap.png'
-	sky_map = savetop + year + '/' + sample + '/D_skymap.png'
-	
-	all_light_curve_savedir = savetop + year + '/A_lightcurve/A_'+sample+'_lightcurve.png'
-	light_curve_savedir = savetop + year + '/' + sample + '/A_all_lightcurve.png'
-	
-	txt_savedir = savetop + year + '/' + sample +'/'
-	
-	all_duration_savedir = savetop + year + '/A_duration/B_'+sample+'_duration.png'
-	duration_savedir = savetop + year + '/' + sample + '/B_duration.png'
-	
-	allcountmapdir = savetop + year + '/A_count_map/C_'+sample+'_countmap.png'
-	countmapdir = savetop + year + '/' + sample + '/C_countmap.png'
-	
-	if (files['trigdat'] is not None) and (files['loc'] is not None):
-		trigtime = files['trigdat'][0].header['TRIGTIME']
-		fermi_gbm = get_fermi_geometry(files['trigdat'])#构建gbm的空间几何
-		detector = fermi_gbm.detectors#读取探测器
-		t_c = fermi_gbm.Time_transition.batch_utc_to_met(fermi_gbm.time,astropyTime = True)
-		
-		loc_hl = files['loc']
-		ra = loc_hl[0].header['RA_OBJ']
-		dec = loc_hl[0].header['DEC_OBJ']
-		source = SkyCoord(ra,dec,frame = 'icrs',unit = 'deg')
-		plot_sky_map(fermi_gbm,source,trigtime,[all_sky_map,sky_map])#--------skymap
-		trigtime_index = np.argmin((t_c-trigtime)**2)
-		
-		#eath_p,radius,_ = fermi_gbm.get_earth_point(index = [trigtime_index])[0]#读取地球的位置和遮掩角度。
-		#detector_centers = fermi_gbm.get_detector_centers(index = [trigtime_index])[0]
-		#detector_index = fermi_gbm.get_detector_index(index = [trigtime_index])[0]
-		#index_ = detector_centers.separation(eath_p)>radius* u.degree
-		#good_detector_centers = detector_centers[index_]
-		#good_detector_index = detector_index[index_]
-		#separation = good_detector_centers.separation(source)
-		
-		
-		tab = fermi_gbm.get_separation(trigtime_index,source=source)      #获得夹角
-		ni_tab = tab[tab['Detector_index']<=11]
-		sort_index = np.argsort(ni_tab['Separation'])
-		good_ni =detector.name_list[ni_tab[sort_index]['Detector_index']] #获得NaI夹角最小探头名列表
-		#good_ni = ni_tab.sort('Separation')[:3]#这个排序有问题，问题不明
-		bgoi_tab = tab[tab['Detector_index']>11]
-		sort_index = np.argsort(bgoi_tab['Separation'])
-		good_bgo = detector.name_list[bgoi_tab[sort_index]['Detector_index']] #获得BGO夹角最小探头名列表
-		light_curve_analysis(files,NaI,BGO,good_ni[:3],good_bgo[:1],txt_savedir,[all_duration_savedir,duration_savedir],[all_light_curve_savedir,light_curve_savedir])
-		
-		
-	else:
-		pass
-def light_curve_analysis(file,NaI,BGO,good_ni,good_bi,txtdir,plotsave,plotsave1):
+def light_curve_analysis(file,NaI,BGO,good_ni,good_bi,txtdir,plotsave,plotsave1,txx=False,WT =False):
 	dt = 0.064
 	maxx = 0
 	new_c = {}
@@ -137,34 +68,34 @@ def light_curve_analysis(file,NaI,BGO,good_ni,good_bi,txtdir,plotsave,plotsave1)
 					myfile.printdatatofile(txtdir+'Z_'+ni+'_bayesian_duration.txt',data = [startedges,stopedges],format = ['.5f','.5f'])
 					flash_start,flash_stop = get_bayesian_flash(result,startedges,stopedges)
 					myfile.printdatatofile(txtdir+'Y_'+ni+'_bayesian_flash.txt',data = [flash_start,flash_stop],format = ['.5f','.5f'])
-					'''
-					txx_result = get_bayesian_txx(result,startedges,stopedges,txx = 0.9,it = 400,lamd = 200.)
-					myplt = Plot(txx_result)
-					plt.title(ni)
-					myplt.plot_light_curve(sigma = 5)
-					plt.xlim(t[0],t[-1])
-					plt.savefig(txtdir + 'X_'+ni+'_bayesian_txx.png')
-					plt.close()
-					print('***********',len(txx_result['txx']),len(txx_result['txx_list']))
-					for ij in range(len(txx_result['txx'])):
+					if txx:
+						txx_result = get_bayesian_txx(result,startedges,stopedges,txx = 0.9,it = 400,lamd = 200.)
+						myplt = Plot(txx_result)
 						plt.title(ni)
-						myplt.plot_distribution('90',num = ij)
-						plt.savefig(txtdir + 'W_'+ni+'_distribution_'+str(ij)+'.png')
+						myplt.plot_light_curve(sigma = 5)
+						plt.xlim(t[0],t[-1])
+						plt.savefig(txtdir + 'X_'+ni+'_bayesian_txx.png')
 						plt.close()
-					plt.figure(figsize = (10,10))
-					plt.subplot(2,1,1)
-					plt.title(ni)
-					myplt.plot_Txx1('90')
-					plt.xlim(t[0],t[-1])
-					plt.subplot(2,1,2)
-					myplt.plot_Txx2('90')
-					plt.xlim(t[0],t[-1])
-					plt.savefig(txtdir + 'U_'+ni+'_txx.png')
-					plt.close()
-					save_result(txx_result,txtdir+'V_'+ni+'_distribution_T90.csv')
-					'''
+						print('***********',len(txx_result['txx']),len(txx_result['txx_list']))
+						for ij in range(len(txx_result['txx'])):
+							plt.title(ni)
+							myplt.plot_distribution('90',num = ij)
+							plt.savefig(txtdir + 'W_'+ni+'_distribution_'+str(ij)+'.png')
+							plt.close()
+						plt.figure(figsize = (10,10))
+						plt.subplot(2,1,1)
+						plt.title(ni)
+						myplt.plot_Txx1('90')
+						plt.xlim(t[0],t[-1])
+						plt.subplot(2,1,2)
+						myplt.plot_Txx2('90')
+						plt.xlim(t[0],t[-1])
+						plt.savefig(txtdir + 'U_'+ni+'_txx.png')
+						plt.close()
+						save_result(txx_result,txtdir+'V_'+ni+'_distribution_T90.csv')
+						
 				if (ni == good_ni[0]) :
-					ni_event = Separate_source(t,ch,ch_n1,WT=False)
+					ni_event = Separate_source(t,ch,ch_n1,WT=WT)
 					s_t,s_ch = ni_event.get_S_t_and_ch()
 					new_t,new_energy = ch_to_energy(s_t,s_ch,ch_n,e1,e2)
 					fig = plt.figure(figsize = (20,20))
@@ -272,7 +203,7 @@ def light_curve_analysis(file,NaI,BGO,good_ni,good_bi,txtdir,plotsave,plotsave1)
 			os.makedirs(dir_)
 		plt.savefig(vv)
 	plt.close()
-			
+
 def get_fermi_geometry(hl):
 	
 	time1 = hl[5].data.field(0)
@@ -292,6 +223,7 @@ def plot_count_map(file,NaI,BGO,savedirlist):
 	n = 1
 	for ni in NaI:
 		if file[ni] is not None:
+			print('get ',ni)
 			hl = file[ni]
 			trigtime = hl[0].header['TRIGTIME']
 			time = hl[2].data.field(0)
@@ -302,7 +234,7 @@ def plot_count_map(file,NaI,BGO,savedirlist):
 			e2 = hl[1].data.field(2)
 			plt.subplot(4, 4, n)
 			plt.title(ni)
-			ni_event = Separate_source(t,ch,ch_n)
+			ni_event = Separate_source(t,ch,ch_n,WT = False)
 			s_t,s_ch = ni_event.get_S_t_and_ch()
 			new_t,new_energy = ch_to_energy(s_t,s_ch,ch_n,e1,e2)
 			plt.plot(new_t,new_energy,',',color = 'k')
@@ -314,6 +246,7 @@ def plot_count_map(file,NaI,BGO,savedirlist):
 			n = n+1
 	for bi in BGO:
 		if file[bi] is not None:
+			print('get ',bi)
 			hl = file[bi]
 			trigtime = hl[0].header['TRIGTIME']
 			time = hl[2].data.field(0)
@@ -324,7 +257,7 @@ def plot_count_map(file,NaI,BGO,savedirlist):
 			e2 = hl[1].data.field(2)
 			plt.subplot(4, 4, n)
 			plt.title(bi)
-			ni_event = Separate_source(t,ch,ch_n)
+			ni_event = Separate_source(t,ch,ch_n,WT = False)
 			s_t,s_ch = ni_event.get_S_t_and_ch()
 			new_t,new_energy = ch_to_energy(s_t,s_ch,ch_n,e1,e2)
 			plt.plot(new_t,new_energy,',',color = 'k')
@@ -340,9 +273,6 @@ def plot_count_map(file,NaI,BGO,savedirlist):
 			os.makedirs(dir_)
 		plt.savefig(savedir)
 	plt.close()
-
-
-
 
 def plot_sky_map(fermi_gbm,source,trigtime, savedirlist):
 	
@@ -389,12 +319,33 @@ def get_file(input_list,NaI,BGO):
 		else:
 			data[bi] = None
 	return data
-#print(get_sample_dir_list(yearlist,databaselink))
 
+def get_spectrum(t,ch,ch_n,edges,bg_dt):
+	
+	data = []
+	data_err = []
+	bins = np.arange(t[0],t[-1],bg_dt)
+	for chi in ch_n:
+		index = np.where(ch == chi)
+		t_ch = t[index]
+		bin_n,bin_edges = np.histogram(t_ch,bins = bins)
+		bin_rate = bin_n/bg_dt
+		bin_rate = np.concatenate((bin_rate[:1],bin_rate))
+		bin_c,cs,bs = TD_baseline(bin_edges,bin_rate)
+		
+		len_edges = edges[1:] - edges[:-1]
+		bin_n1,bin_edges1 = np.histogram(t_ch,bins=edges)
+		bin_c1 = (bin_edges1[1:]+bin_edges1[:-1])*0.5
+		bin_rate1 = bin_n1/len_edges
+		bs1 = np.interp(bin_c1,bin_c,bs)
+		bin_err = np.sqrt(bin_n1)/len_edges
+		bin_err[bin_err<=0] = 1.0
+		cs1 = bin_rate1-bs1
+		data.append(list(cs1))
+		data_err.append(list(bin_err))
+		
+	data = np.array(data).T
+	data_err = np.array(data_err).T
+	return data,data_err
 
-sample_dir_list = get_sample_dir_list(yearlist,databaselink)
-pool = Pool(2)
-pool.map(analysis_one_sample,sample_dir_list)
-pool.close()
-pool.join()#主进程阻塞，等待子进程推出
 
