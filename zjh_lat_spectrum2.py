@@ -26,6 +26,16 @@ ch_n = hl[1].data.field(0)
 e1 = hl[1].data.field(1)
 e2 = hl[1].data.field(2)
 t = time - trigtime
+
+hl1 = files['b0']
+trigtime1 = hl1[0].header['TRIGTIME']
+time1 = hl1[2].data.field(0)
+ch1 = hl1[2].data.field(1)
+ch_n1 = hl1[1].data.field(0)
+e11 = hl1[1].data.field(1)
+e21 = hl1[1].data.field(2)
+t1 = time1 - trigtime1
+
 #ch_index = np.where((ch>=3)&(ch<123))[0]
 #ch_n1 = np.arange(3,123,1,dtype = int)
 #t = t[ch_index]
@@ -56,8 +66,10 @@ plt.savefig(savedir +'ZZ_lock_lc.png')
 plt.close()
 
 spc,spc_err = get_spectrum(t,ch,ch_n,lim_edges,1)
-myfile.printdatatofile(savedir+'ZZ_spectrum.txt',data = [spc[2],spc_err[2]],format = ['.6f','.6f'])
-
+spc1,spc_err1 = get_spectrum(t1,ch1,ch_n1,lim_edges,1)
+for i in range(len(spc)):
+	myfile.printdatatofile(savedir+'ZZ_spectrum_n2_'+str(i)+'.txt',data = [spc[i],spc_err[i]],format = ['.6f','.6f'])
+	myfile.printdatatofile(savedir+'ZZ_spectrum_b0_'+str(i)+'.txt',data = [spc1[i],spc_err1[i]],format = ['.6f','.6f'])
 
 '''
 spc_bins = np.arange(t[0],t[-1],0.5)

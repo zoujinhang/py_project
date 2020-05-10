@@ -1,7 +1,7 @@
 from astropy.io import fits
 import numpy as np
 import matplotlib.pyplot as plt
-from Fermi_tool.spectrum import Rsp
+
 import sympy
 from scipy import optimize
 import Data_analysis.file as myfile
@@ -12,13 +12,17 @@ import json
 import pymultinest
 import os
 from zjh_plotmarginalmodes import PlotMarginalModes
-rsp_link = '/home/laojin/my_lat/spectrum/response_matrix/glg_cspec_n2_bn150330828_v00.rsp'
+
+
+rsp_link = '/home/laojin/my_lat/spectrum/response_matrix/glg_cspec_b0_bn150330828_v00.rsp'
+#rsp_link = '/home/laojin/my_lat/spectrum/response_matrix/glg_cspec_n2_bn150330828_v00.rsp'
 savedir = '/home/laojin/my_lat/spectrum/response_matrix/'
 
 
-y_sp,y_sp_err = myfile.readcol(savedir +'ZZ_spectrum0.txt')
-y_sp = np.array(y_sp)
-y_sp_err = np.array(y_sp_err)
+#y_sp,y_sp_err = myfile.readcol(savedir +'ZZ_spectrum0.txt')
+y_sp,y_sp_err = myfile.readcol(savedir +'ZZ_spectrum_b0_0.txt')
+
+
 
 hl = fits.open(rsp_link)
 matr = hl[2].data['MATRIX']#响应矩阵在这里
@@ -143,9 +147,9 @@ def band_model_log_like(cube,ndim,nparams):
 	return loglike
 
 def prior(cube,ndim,nparams):
-	cube[0] = 100000*cube[0]
-	cube[1] = 40*cube[1]-20
-	cube[2] = (cube[1]+40)*cube[2]-40
+	cube[0] = 10000*cube[0]
+	cube[1] = 30*cube[1]-20
+	cube[2] = (cube[1]+30)*cube[2]-30
 	cube[3] = 10**(20*cube[3]-10)
 	
 parameters = ['K','a','b','Ec']
@@ -153,7 +157,7 @@ n_params = len(parameters)
 mul_dir = savedir+'out/'
 if os.path.exists(mul_dir) ==False:
 	os.makedirs(mul_dir)
-pymultinest.run(band_model_log_like, prior, n_params, outputfiles_basename=mul_dir+'_1_',resume = True, verbose = True)
+pymultinest.run(band_model_log_like, prior, n_params, outputfiles_basename=mul_dir+'_1_',resume = False, verbose = True)
 json.dump(parameters, open(mul_dir + 'params.json', 'w'))
 a1 = pymultinest.Analyzer(outputfiles_basename=mul_dir + '_1_', n_params = n_params)
 p = PlotMarginalModes(a1)
@@ -204,6 +208,13 @@ plt.plot(e_c0,f(band(e_c,k0,a0,b0,Ec0)), color='r')
 plt.xscale('log')
 plt.savefig(savedir+'Z_data_multinest.png')
 plt.close()
+
+fig, ax = plt.subplots()
+ax.errorbar(e_c0,y,yerr = y_sp_err)
+fig.savefig(savedir+'Z_data_multinest2.png')
+plt.close(fig)
+
+
 '''
 pos = xxx1 + 1e-1 * np.random.rand(300,140)
 pos[pos<0]=0
