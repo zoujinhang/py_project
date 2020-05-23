@@ -14,13 +14,13 @@ import os
 from zjh_plotmarginalmodes import PlotMarginalModes
 
 
-rsp_link = '/home/laojin/my_lat/spectrum/response_matrix/glg_cspec_b0_bn150330828_v00.rsp'
-#rsp_link = '/home/laojin/my_lat/spectrum/response_matrix/glg_cspec_n2_bn150330828_v00.rsp'
+#rsp_link = '/home/laojin/my_lat/spectrum/response_matrix/glg_cspec_b0_bn150330828_v00.rsp'
+rsp_link = '/home/laojin/my_lat/spectrum/response_matrix/glg_cspec_n2_bn150330828_v00.rsp'
 savedir = '/home/laojin/my_lat/spectrum/response_matrix/'
 
 
 #y_sp,y_sp_err = myfile.readcol(savedir +'ZZ_spectrum0.txt')
-y_sp,y_sp_err = myfile.readcol(savedir +'ZZ_spectrum_b0_0.txt')
+y_sp,y_sp_err = myfile.readcol(savedir +'ZZ_spectrum_n2_0.txt')
 
 
 
@@ -44,10 +44,12 @@ b = R*a
 #print(np.array(b).T)
 e_c0 = np.sqrt(e_min*e_max)
 #y = e_c0**2*np.exp(-0.001*(e_c0-40)**2)
-y = y_sp
+y = np.array(y_sp)/(e_max-e_min)
+y_sp_err = np.array(y_sp_err)/np.sqrt(e_max-e_min)
 #y = np.ones(128)+10
 Y = np.mat(y)
 Y_E = np.mat(y_sp_err)
+
 def f(x):
 	X = np.mat(x)
 	return np.array(X*R)[0]
@@ -89,17 +91,28 @@ xxx1 = WhittakerSmooth(xxx,w,1)
 print(bounds)
 print('---------------------------------')
 print(xxx)
-plt.plot(e_c,xxx)
-plt.plot(e_c,xxx1)
+
+plt.title('Pre-response spectrum')
+plt.plot(e_c,xxx,label = 'The fit of response matrix model')
+plt.plot(e_c,xxx1,label = 'Smooth of the model fit')
 plt.xscale('log')
 plt.yscale('log')
+plt.xlabel('Energy (Kev)')
+plt.ylabel('A(E)')
+plt.legend()
 plt.savefig(savedir+'A_fit_l_bfgs_b.png')
 plt.close()
 
-plt.plot(e_c0,y)
-plt.plot(e_c0,f(xxx))
-plt.plot(e_c0,f(xxx1))
+plt.title('Post-response spectrum')
+plt.errorbar(e_c0,y,yerr=y_sp_err,fmt = '.',elinewidth=2,capsize=2,alpha=0.3,label = 'spectrum data')
+#plt.plot(e_c0,y)
+plt.plot(e_c0,f(xxx),label = 'The Post-response of response matrix model fit')
+plt.plot(e_c0,f(xxx1),label = 'The Post-response of smooth of the model fit')
+plt.xlabel('Energy (Kev)')
+plt.ylabel('n /s/Kev')
 plt.xscale('log')
+plt.yscale('log')
+plt.legend()
 plt.savefig(savedir+'A_data_l_bfgs_b.png')
 plt.close()
 
@@ -157,7 +170,7 @@ n_params = len(parameters)
 mul_dir = savedir+'out/'
 if os.path.exists(mul_dir) ==False:
 	os.makedirs(mul_dir)
-pymultinest.run(band_model_log_like, prior, n_params, outputfiles_basename=mul_dir+'_1_',resume = False, verbose = True)
+pymultinest.run(band_model_log_like, prior, n_params, outputfiles_basename=mul_dir+'_1_',resume = True, verbose = True)
 json.dump(parameters, open(mul_dir + 'params.json', 'w'))
 a1 = pymultinest.Analyzer(outputfiles_basename=mul_dir + '_1_', n_params = n_params)
 p = PlotMarginalModes(a1)
@@ -194,8 +207,8 @@ print('best fit ',k0,a0,b0,Ec0)
 plt.plot(e_c, band(e_c,k0,a0,b0,Ec0), '-', color='r')
 plt.plot(e_c,xxx1,color = 'orange')
 plt.xscale('log')
-plt.yscale('log')
-plt.ylim(10**-4,)
+#plt.yscale('log')
+#plt.ylim(10**-4,)
 plt.savefig(savedir + 'A_multinest.png')
 plt.close()
 results = a1.get_stats()

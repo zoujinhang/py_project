@@ -36,6 +36,16 @@ e11 = hl1[1].data.field(1)
 e21 = hl1[1].data.field(2)
 t1 = time1 - trigtime1
 
+
+hl2 = files['n1']
+trigtime2 = hl2[0].header['TRIGTIME']
+time2 = hl2[2].data.field(0)
+ch2 = hl2[2].data.field(1)
+ch_n2 = hl2[1].data.field(0)
+e12 = hl2[1].data.field(1)
+e22 = hl2[1].data.field(2)
+t2 = time2 - trigtime2
+
 #ch_index = np.where((ch>=3)&(ch<123))[0]
 #ch_n1 = np.arange(3,123,1,dtype = int)
 #t = t[ch_index]
@@ -50,26 +60,43 @@ bin_n_sm = np.round(rate_sm*dt)
 edges = bayesian_blocks(t_c,bin_n_sm,fitness='events',p0 = 0.05)
 result = background_correction(t_c,rate_sm,edges,degree = 7)
 
-edges_index = np.where((edges>=140)&(edges<=160))[0]
+edges_index = np.where((edges>=90)&(edges<=170))[0]
 lim_edges = edges[edges_index]
 
 re_rate = result['re_hist'][0]
 re_rate = np.concatenate((re_rate[:1],re_rate))
 t_c,rate_c = result['lc']
 
-plt.plot(t_c,rate_c,label = 'light curve')
-for i in lim_edges:
-	plt.axvline(x=i,color = 'r')
-plt.step(edges,re_rate,color = 'k',label = 'block')
-plt.xlim(80,200)
-plt.savefig(savedir +'ZZ_lock_lc.png')
-plt.close()
+
 
 spc,spc_err = get_spectrum(t,ch,ch_n,lim_edges,1)
 spc1,spc_err1 = get_spectrum(t1,ch1,ch_n1,lim_edges,1)
+spc2,spc_err2 = get_spectrum(t2,ch2,ch_n2,lim_edges,1)
 for i in range(len(spc)):
 	myfile.printdatatofile(savedir+'ZZ_spectrum_n2_'+str(i)+'.txt',data = [spc[i],spc_err[i]],format = ['.6f','.6f'])
 	myfile.printdatatofile(savedir+'ZZ_spectrum_b0_'+str(i)+'.txt',data = [spc1[i],spc_err1[i]],format = ['.6f','.6f'])
+	myfile.printdatatofile(savedir+'ZZ_spectrum_n1_'+str(i)+'.txt',data = [spc2[i],spc_err2[i]],format = ['.6f','.6f'])
+lim_tc = 0.5*(lim_edges[1:]+lim_edges[:-1])
+Ep,errl,errh = myfile.readcol('/home/laojin/my_lat/spectrum/A_spectrum/D_Ep.txt')
+E0,errl0,errh0 = myfile.readcol('/home/laojin/my_lat/spectrum/A_spectrum/D_E0.txt')
+
+fig, ax1 = plt.subplots()
+ax1.plot(t_c,rate_c,label = 'light curve')
+#for i in lim_edges:
+#	ax1.axvline(x=i,color = 'r')
+ax1.step(edges,re_rate,color = 'k',label = 'block')
+ax1.set_ylabel('rate')
+ax1.set_xlim(90,170)
+ax2 = ax1.twinx()
+ax2.errorbar(lim_tc,Ep,yerr = [errl,errh],color = 'g',ecolor = 'g',fmt = 'o')
+ax2.errorbar(lim_tc,E0,yerr = [errl0,errh0],color = 'r',ecolor = 'r',fmt = 'o')
+ax2.set_xlim(90,170)
+ax2.set_ylim(30,10**3)
+ax2.set_yscale('log')
+ax2.set_ylabel('Ep Kev')
+fig.savefig(savedir +'ZZ_lock_lc.png')
+plt.close(fig)
+
 
 '''
 spc_bins = np.arange(t[0],t[-1],0.5)

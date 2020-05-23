@@ -3,7 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import Data_analysis.file as myfile
-from Fermi_tool.spectrum import Fit,Spectrum
+from Fermi_tool.spectrum import Fit,Spectrum,Prior
+from matplotlib.gridspec import GridSpec
 
 def band(e,cube):
 	k = cube[0]
@@ -14,16 +15,18 @@ def band(e,cube):
 	if a<b:
 		return [np.nan]
 	val = 10**Ec*(a-b)
-	a1 = k*(e[e<val]/100)**a*np.exp(-(e[e<val]/10**Ec))
-	a2 = k*np.exp(b-a)*(val/100)**(a-b)*(e[e>=val]/100)**b
+	a1 = 10**k*(e[e<val]/100)**a*np.exp(-(e[e<val]/10**Ec))
+	a2 = 10**k*np.exp(b-a)*(val/100)**(a-b)*(e[e>=val]/100)**b
 	A = np.concatenate((a1,a2))
 	return A
 
 def prior(cube,ndim,nparams):
-	cube[0] = 10000*cube[0]
-	cube[1] = 10*cube[1]-5
-	cube[2] = 10*cube[2]-8
-	cube[3] = (8.7*cube[3]+1.3)
+	#print('ndim',ndim)
+	#print('nparams',nparams)
+	cube[0] = (12*cube[0]-5)
+	cube[1] = 8*cube[1]-3
+	cube[2] = 7*cube[2]-5
+	cube[3] = (11.3*cube[3]-1.3)
 
 def band2(e,cube):
 	
@@ -83,36 +86,85 @@ def prior_bb2(cube,ndim,nparams):
 	
 rsp_link_b0 = '/home/laojin/my_lat/spectrum/response_matrix/glg_cspec_b0_bn150330828_v00.rsp'
 rsp_link_n2 = '/home/laojin/my_lat/spectrum/response_matrix/glg_cspec_n2_bn150330828_v00.rsp'
+rsp_link_n1 = '/home/laojin/my_lat/spectrum/response_matrix/glg_cspec_n1_bn150330828_v00.rsp'
 savedir = '/home/laojin/my_lat/spectrum/A_spectrum/'
 if os.path.exists(savedir)==False:
 	os.makedirs(savedir)
 
+band_prior_list = [
+	Prior([-5,4]),
+	Prior([-3,8]),
+	Prior([-5,2]),
+	Prior([-1.3,10])
+]
 
-for i in range(10):
+Ep_list = []
+E0_list = []
+for i in range(36):
 	y_sp,y_sp_err = myfile.readcol(savedir +'ZZ_spectrum_n2_'+str(i)+'.txt')
 	y_sp_n2 = np.array(y_sp)
 	y_sp_err_n2 = np.array(y_sp_err)
 	
-	spectrum_n2 = Spectrum(y_sp_n2,y_sp_err_n2,rsp_link_n2,effective_band=[10,800],spectrum_name = 'n2')
+	spectrum_n2 = Spectrum(y_sp_n2,y_sp_err_n2,rsp_link_n2,effective_band=[8,800],spectrum_name = 'n2')
 	
 	
 	y_sp,y_sp_err = myfile.readcol(savedir +'ZZ_spectrum_b0_'+str(i)+'.txt')
 	y_sp_b0 = np.array(y_sp)
 	y_sp_err_b0 = np.array(y_sp_err)
 	
-	spectrum_b0 = Spectrum(y_sp_b0,y_sp_err_b0,rsp_link_b0,effective_band=[400,20000],spectrum_name = 'b0')
+	spectrum_b0 = Spectrum(y_sp_b0,y_sp_err_b0,rsp_link_b0,effective_band=[600,30000],spectrum_name = 'b0')
 	
-	parameters = ['K','a','b','logEc']
+	y_sp,y_sp_err = myfile.readcol(savedir +'ZZ_spectrum_n1_'+str(i)+'.txt')
+	y_sp_n1 = np.array(y_sp)
+	y_sp_err_n1 = np.array(y_sp_err)
+	
+	spectrum_n1 = Spectrum(y_sp_n1,y_sp_err_n1,rsp_link_n1,effective_band=[8,800],spectrum_name = 'n1')
+	parameters = ['log K','a','b','log Ec']
 	parameters2 = ['K','a0','a','b','E0','Ec']
 	parameters_bb2 = ['K1','kt1','K2','kt2']
 	
 	#fit = Fit([spectrum_n2],band2,prior2,parameters2)
-	fit = Fit([spectrum_n2,spectrum_b0],band,prior,parameters)
+	fit = Fit([spectrum_n2,spectrum_n1,spectrum_b0],band,band_prior_list,parameters,reference=False)
 	#fit = Fit([spectrum_n2,spectrum_b0],model_bb2,prior_bb2,parameters_bb2)
 	mul_dir = savedir+'A_n'+str(i)+'_out/'
 	if os.path.exists(mul_dir) ==False:
 		os.makedirs(mul_dir)
 	A = fit.run(outputfiles_basename=mul_dir+'A_n'+str(i)+'_',resume = False, verbose = True)
+	equ_w = A.get_equal_weighted_posterior()
+	c = A.get_stats()['modes'][0]
+	logkM,am,bm,logEcM = np.array(c['maximum'])
+	mean = np.array(c['mean'])[3]
+	sigma = np.array(c['sigma'])[3]
+	Epm = (2+am)/(am-bm)*10**logEcM
+	dx = mean - logEcM
+	sigmal = sigma - dx
+	sigmah = sigma + dx
+	Ec = 10**logEcM
+	E0_list.append([Ec,Ec-10**(logEcM-sigmal),10**(logEcM+sigmah)-Ec])
+	
+	loglike = equ_w[:,-1]
+	
+	a= equ_w[:,1]
+	b = equ_w[:,2]
+	log_Ec = equ_w[:,3]
+	loglikemin = loglike.min()
+	loglikemax = loglike.max()
+	d_like = loglikemax-loglikemin
+	vv = loglikemax-0.305*d_like
+	good_index = np.where(loglike>vv)[0]
+	a= a[good_index]
+	b = b[good_index]
+	log_Ec =log_Ec[good_index]
+	Ep = (2+a)/(a-b)*10**log_Ec
+	Ep_max = Ep.max()
+	Ep_min = Ep.min()
+	Ep_mean = 0.5*(Ep_max+Ep_min)
+	Ep_sigma = 0.5*(Ep_max-Ep_min)
+	dx = Ep_mean - Epm
+	sigmal = Ep_sigma - dx
+	sigmah = Ep_sigma + dx
+	
+	Ep_list.append([Epm,sigmal,sigmah])
 	
 	fig,ax = plt.subplots()
 	fit.plot_model(A,n=2,ax = ax,reference = True)
@@ -123,12 +175,33 @@ for i in range(10):
 	fig.savefig(savedir + 'B_plot_model_'+str(i)+'.png')
 	plt.close(fig)
 	
-	fig,ax = plt.subplots()
-	fit.plot_data(A,n=2,ax = ax,reference = True)
-	ax.set_xscale('log')
-	ax.set_yscale('log')
-	ax.set_ylim(10**-2,)
-	ax.legend()
+	#fig,ax = plt.subplots()
+	fig = plt.figure(constrained_layout=True,figsize=(8,11))
+	fig.suptitle('Multinest fit of band model')
+	gs = GridSpec(4, 1, figure=fig)
+	ax1 = fig.add_subplot(gs[0:2])
+	fit.plot_data(A,n=0,ax = ax1,reference = True)
+	ax1.set_xscale('log')
+	ax1.set_xlim(8,30000)
+	ax1.set_yscale('log')
+	#ax1.set_ylim(10**-2,)
+	ax1.legend()
+	ax1.tick_params(labelbottom=False)
+	ax1.set_ylabel('spectrum (rate/kev)')
+	
+	ax2 = fig.add_subplot(gs[2])
+	fit.plot_data_in_model(A,ax=ax2)
+	ax2.set_xscale('log')
+	ax2.set_xlim(8,30000)
+	ax2.legend()
+	ax2.tick_params(labelbottom=False)
+	
+	ax3 = fig.add_subplot(gs[3])
+	fit.plot_data_in_reference(ax=ax3)
+	ax3.set_xscale('log')
+	ax3.set_xlim(8,30000)
+	ax3.legend()
+	ax3.set_xlabel('spectrum energy (kev)')
 	fig.savefig(savedir + 'A_plot_data_'+str(i)+'.png')
 	plt.close(fig)
 	
@@ -136,4 +209,6 @@ for i in range(10):
 	plt.savefig(savedir + 'C_plot_corner_'+str(i)+'.png')
 	plt.close()
 
+myfile.printdatatofile(savedir+'D_Ep.txt',data = np.array(Ep_list).T,format = ['.6f']*3)
+myfile.printdatatofile(savedir+'D_E0.txt',data = np.array(E0_list).T,format = ['.6f']*3)
 
