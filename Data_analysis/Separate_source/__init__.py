@@ -1,6 +1,6 @@
 '''
+Separation of background photon events is performed.
 
-进行背景光子事件的分离。
 '''
 
 from .MC_separate import *
@@ -71,11 +71,11 @@ class Separate_source(object):
 		self.b_ch = b_ch[b_index]
 	def check_background(self):
 		'''
-		背景检查，首先逐能道检查背景，然后检查总背景，以防背景过扣。
+		Background check. First check the background one by one, then check the general background to prevent the background from crossing.
 		:return:
 		'''
 		#-------------------------------------------------------------------------------------------------------
-		b_s = np.array([])                                                          #逐能道检测背景部分
+		b_s = np.array([])                                                          #Check the background part by energy path
 		b_b = np.array([])
 		b_s_ch = np.array([])
 		b_b_ch = np.array([])

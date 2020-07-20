@@ -11,6 +11,8 @@ from astropy.table import Table
 from moviepy.editor import VideoClip
 from moviepy.video.io.bindings import mplfig_to_npimage
 from matplotlib.patches import Polygon
+import pandas as pd
+
 
 class Geometry(object):
 	
@@ -30,28 +32,72 @@ class Geometry(object):
 			self.detectors = detector
 	
 		
-	def input_pose(self,quaternion,sc_pos = None,time = None,ef_radius = 60):
+	def input_pose(self,quaternion,sc_pos = None,pos_unit = None,time = None,ef_radius = 60):
 		'''
 		
-		:param quaternion:[[q1,q2,q3,q0],[q1,q2,q3,q0]]
+		:param quaternion:[[q1,q2,q3,q0],[q1,q2,q3,q0]] or pd.DataFrame
 		:param sc_pos:[[x,y,z],[x,y,z]]
 		:param time:
 		:param ef_radius:
 		:return:
 		'''
-		if time is not None:
-			if (isinstance(time, str)):
-				self.time = Time(time)
-			else:
-				self.time = self.Time_transition.batch_met_to_utc(time)
+		
+		if isinstance(quaternion,pd.DataFrame):
+			self.quaternion = quaternion[['QSJ_1', 'QSJ_2', 'QSJ_3', 'QSJ_4']].values
+			try:
+				self.met_time = quaternion['SCLK_UTC'].values
+				self.time  = self.Time_transition.batch_met_to_utc(self.met_time)
+			except:
+				self.met_time = None
+				self.time = None
+			try:
+				if pos_unit is not None:
+					self.sc_pos = quaternion[['POS_X','POS_Y','POS_Z']].values * pos_unit
+				else:
+					self.sc_pos = quaternion[['POS_X','POS_Y','POS_Z']].values * u.m
+			except:
+				self.sc_pos = None
 		else:
-			self.time = None
-		self.radius = ef_radius
-		self.quaternion = quaternion
+			self.quaternion = quaternion
+			if time is not None:
+				if (isinstance(time, str)):
+					self.met_time = self.Time_transition.utc_to_met(time)
+					self.time = Time(time)
+				else:
+					self.met_time = time
+					self.time = self.Time_transition.batch_met_to_utc(time)
+			else:
+				self.met_time = None
+				self.time = None
+			self.sc_pos = sc_pos
+			if pos_unit is not None:
+				self.sc_pos = self.sc_pos * pos_unit
+			
+			
 		self.index = np.arange(len(self.quaternion),dtype = int)
-		self.sc_pos = sc_pos
-		self.detectors.input_quaternion(self.quaternion)
+		self.radius = ef_radius
+		self.detectors.input_quaternion(self.quaternion,self.met_time)
+		
 		#self.all_sky = self.all_sky(num_points = 2000)
+	
+	def get_separation_with_time(self,t,source):
+		deter_name = self.detectors.name_list
+		center_f = self.detectors.center_function
+		if center_f is not None:
+			retr = {'time':t}
+			for deteri in deter_name:
+				xf,yf,zf = center_f[deteri]
+				x = xf(t)
+				y = yf(t)
+				z = zf(t)
+				position = cartesian_to_spherical(x,y,z)
+				ra_t = position[2].deg
+				dec_t = position[1].deg
+				center = SkyCoord(ra = ra_t,dec = dec_t,frame='icrs', unit='deg')
+				retr[deteri] = center.separation(source).value
+			return 	pd.DataFrame(retr)
+		else:
+			return None
 		
 	def all_sky(self,num_points = 3000):
 		
@@ -171,7 +217,7 @@ class Geometry(object):
 	def detector_plot(self,radius = 10.0,source=None,points = None,good = False,projection = 'moll',
 	                  lat_0 = 0,lon_0 = 180,ax = None,show_bodies = False,
 	                  style = 'A',index = None):
-		pole = SkyCoord([0, 0], [90, -90], frame='icrs', unit='deg')
+		#pole = SkyCoord([0, 0], [90, -90], frame='icrs', unit='deg')
 		if ax is None:
 			fig = plt.figure(figsize = (20,10))
 			ax = fig.add_subplot(1,1,1)
@@ -185,7 +231,6 @@ class Geometry(object):
 		else:
 			index_ = self.get_detector_index(index=[index])[0]
 			centor = self.get_detector_centers(index = [index])[0]
-		
 		if show_bodies and self.sc_pos is not None:
 			#print('plot_earth!')
 			if projection in ['moll']:
@@ -731,9 +776,9 @@ def get_poly(position, radius, x, y, lon_0,map_,facecolor='coral', edgecolor='co
 			#print('len(x[x > xx_dd]) > len(x[x <= xx_dd])')
 			if len(x[x <= xx_dd]) > 0:
 				#print('len(x[x <= xx_dd]) > 0')
-				# x大于xx_dd
+				
 				for i in range(len(x)):
-					# x小于xx_dd一律等于xx_dd+0.1
+					
 					if x[i] <= xx_dd:
 						x_1.append(xx_dd + 0.1)
 						y_1.append(y[i])
@@ -745,7 +790,7 @@ def get_poly(position, radius, x, y, lon_0,map_,facecolor='coral', edgecolor='co
 				amax = aa.max()
 				amin = aa.min()
 				for i in range(len(x)):
-					# x大于xx_dd一律等于xx_dd-0.1
+					
 					if x[i] >= xx_dd:
 						x_2.append(xx_dd - 0.1)
 						if y[i] > amax:
@@ -772,7 +817,7 @@ def get_poly(position, radius, x, y, lon_0,map_,facecolor='coral', edgecolor='co
 			#print('len(x[x > xx_dd]) > len(x[x <= xx_dd]) else')
 			if len(x[x > xx_dd]) > 0:
 				#print('len(x[x > xx_dd]) > 0')
-				# 小于xx_dd为主
+				
 				for i in range(len(x)):
 					if x[i] >= xx_dd:
 						x_1.append(xx_dd - 0.1)

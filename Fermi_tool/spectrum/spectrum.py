@@ -326,8 +326,8 @@ class Fit(object):
 		lolims = np.zeros(len(sigmal),dtype=bool)
 		#l_index = np.where(sigmal<0)[0]
 		#h_index = np.where()
-		lolims[[sigmal<=0]]=True
-		uplims[[sigmah<=0]]=True
+		lolims[sigmal<=0]=True
+		uplims[sigmah<=0]=True
 		sigmal[sigmal < 0] = 0
 		sigmah[sigmah < 0] = 0
 		plt.figure(figsize=(5*self.n_params,5*self.n_params))

@@ -2,17 +2,20 @@
 import numpy as np
 from scipy.sparse import csc_matrix,eye,diags
 from scipy.sparse.linalg import spsolve
+import operator
+from scipy import stats
+from astropy.stats import sigma_clip,mad_std
 
 def WhittakerSmooth(x,w,lambda_):
 	'''
 
-	:param x: array 输入数值，数组
-	:param w: array 与数值对应的权重数组
-	:param lambda_: 平滑参数
-	:return: array 平滑结果
+	:param x: array
+	:param w: array .An array of weights corresponding to the values
+	:param lambda_: Smoothing parameter
+	:return: array Smoothing results
 	'''
 	
-	X=np.mat(x)#这里将数组转化为矩阵。矩阵之后就不可以用索引进行引用了。
+	X=np.mat(x)
 	m=X.size
 	#i=np.arange(0,m)
 	E=eye(m,format='csc')
@@ -20,9 +23,34 @@ def WhittakerSmooth(x,w,lambda_):
 	W=diags(w,0,shape=(m,m))
 	A=csc_matrix(W+(lambda_*D.T*D))
 	B=csc_matrix(W*X.T)
-	background=spsolve(A,B)   #求解矩阵方程
+	background=spsolve(A,B)
 
 	return np.array(background)
+
+def get_w(cs,sigma):
+	return np.exp(-0.5/(sigma**2)*(cs)**2)
+
+def TD_bs(t,rate,it_ = 1,lambda_=4000,sigma = False,hwi = None,it = None,inti = None):
+	dt = t[1]-t[0]
+	t_c,cs,bs = TD_baseline(t,rate,hwi = hwi,it = it ,inti =inti)
+	mask = sigma_clip(cs, sigma=5, maxiters=5, stdfunc=mad_std).mask
+	myfilter = list(map(operator.not_, mask))
+	lc_median_part = cs[myfilter]
+	loc, scale = stats.norm.fit(lc_median_part)
+	for i in range(it_):
+		w = get_w(cs,scale)
+		bs = WhittakerSmooth(rate,w,lambda_=lambda_/dt**1.5)
+		cs = rate - bs
+		mask = sigma_clip(cs, sigma=5, maxiters=5, stdfunc=mad_std).mask
+		myfilter = list(map(operator.not_, mask))
+		lc_median_part = cs[myfilter]
+		loc, scale = stats.norm.fit(lc_median_part)
+		
+	if sigma:
+		return cs,bs,scale
+	else:
+		return cs,bs
+
 
 def TD_baseline(time,rate,lam = None,hwi = None,it = None,inti = None):
 	'''
@@ -42,6 +70,8 @@ def TD_baseline(time,rate,lam = None,hwi = None,it = None,inti = None):
 		lam = lam/dt**1.5
 	if(hwi is None):
 		hwi = int(20/dt)
+	else:
+		hwi = int(hwi/dt)
 	if(it is None):
 		it = 5
 	if(inti is None):
@@ -103,11 +133,11 @@ def baseline_kernel(spectra,lambda_,hwi,it,int_):
 	#print(w)
 
 	lims = np.linspace(0,spectra.size -1,int_+1)
-	lefts = np.array(np.ceil(lims[:-1]),dtype = int)#这里指的是索引值
-	rights = np.array(np.floor(lims[1:]),dtype = int)#同上
-	minip = (lefts+rights)*0.5#索引
+	lefts = np.array(np.ceil(lims[:-1]),dtype = int)#This is the index value
+	rights = np.array(np.floor(lims[1:]),dtype = int)#Same as above
+	minip = (lefts+rights)*0.5#The index
 	xx = np.zeros(int_)
-	for i in range(int_):#这里是一个rebin的过程,这里可以提速
+	for i in range(int_):
 		xx[i] = spectra[lefts[i]:rights[i]+1].mean()
 
 	

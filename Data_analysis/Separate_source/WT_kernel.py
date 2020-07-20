@@ -37,7 +37,7 @@ class WT_kernel(object):
 		#sigma_ = (1/self.dt)**2
 		sigma = 0.5/(self.dt)**2
 		for index,value in enumerate(self.t):
-			ww = self.weight(self.t,value,sigma)  #长度为t的长度。
+			ww = self.weight(self.t,value,sigma)  #
 			dti = np.insert(dt,index,0)
 			ww_sum = ww.sum()-1
 			wt[index] = (dti*ww).sum()/ww_sum

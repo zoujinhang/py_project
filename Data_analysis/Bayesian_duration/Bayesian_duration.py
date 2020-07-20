@@ -169,19 +169,20 @@ def confidence_analysis(mean1,sigma1,T1,mean2,sigma2,T2,dt,degree = 3):
 	return (mean1>=mean2-degree*sigma2_1)&(mean1<=mean2+degree*sigma2_1)&(mean2>=mean1-degree*sigma1_2)&(mean2<=mean1+degree*sigma1_2)
 
 
-def get_bayesian_duration(data,sigma = 5):
+def get_bayesian_duration(data,sigma = 5,max_snr=False):
 	'''
 	
 	:param data: the result from background_correction()
 	:param sigma:
 	:return:
 	'''
-	start = 0
-	stop = 0
+	#start = 0
+	#stop = 0
 	pulse = 1
 	cafe = 2
 	fringe_up = 3
 	fringe_down = 4
+	fringe = 5
 	#t,rate = data['lc']
 	edges = data['edges']
 	re_rate,re_sigma,index_list = data['re_hist']
@@ -190,55 +191,73 @@ def get_bayesian_duration(data,sigma = 5):
 	SNR = get_SNR(edges,re_rate,bkg,bkgsigma,dt,non_negative=True)
 	
 	binstart = edges[:-1]
-	#binstop = edges[1:]
+	binstop = edges[1:]
+	center = 0.5*(binstart+binstop)
 	trait = []
 	for index1,hight in enumerate(re_rate):
 		if (index1 == 0):
-			trait.append(start)
+			if hight > re_rate[index1+1]:
+				trait.append(fringe_down)
+			else:
+				trait.append(cafe)
+			
 		elif (index1 == len(re_rate)-1):
-			trait.append(stop)
+			
+			if hight > re_rate[index1-1]:
+				trait.append(fringe_up)
+			else:
+				trait.append(cafe)
+				
 		else:
 			if (hight> re_rate[index1-1]) and (hight > re_rate[index1+1]):
 				trait.append(pulse)
 			elif (hight <= re_rate[index1-1]) and (hight <= re_rate[index1+1]):
 				trait.append(cafe)
-			elif (hight < re_rate[index1-1]) and (hight >= re_rate[index1+1]):
+			elif (hight < re_rate[index1-1]) and (hight > re_rate[index1+1]):
 				trait.append(fringe_down)
-			elif (hight >= re_rate[index1-1]) and (hight < re_rate[index1+1]):
+			elif (hight > re_rate[index1-1]) and (hight < re_rate[index1+1]):
 				trait.append(fringe_up)
 			else:
-				trait.append(cafe)
+				trait.append(fringe)
 	start_tag = False
 	start_edges = []
 	stop_edges = []
-	
+	good_edges = []
 	for index,value in enumerate(trait):
 
-		if (SNR[index]>sigma) and (start_tag == False):
+		if (SNR[index]>sigma) and (start_tag == False):#get start
 			
-			if value != fringe_down:
-				start_edges.append(binstart[index])
-				start_tag = True
-			else:
-				if len(stop_edges)>0:
-					stop_edges.pop()
+			if (value != fringe_down)and(value != cafe):
+				good_edges.append(binstart[index])
+				#start_edges.append(binstart[index])
 				start_tag = True
 				
+		elif (SNR[index] <= sigma) and start_tag:#get stop
 			
-		elif (SNR[index] <= sigma) and start_tag:
-			
-			if value != fringe_up:
-				stop_edges.append(binstart[index])
+			if (value != fringe_up)and(value != pulse):
+				good_edges.append(binstart[index])
+				#stop_edges.append(binstart[index])
 				start_tag = False
-	if start_tag:
-		if len(start_edges)>0:
-			start_edges.pop()
+				if len(good_edges)==2:
+					start_edges.append(min(good_edges))
+					stop_edges.append(max(good_edges))
+					good_edges = []
+	
 	#print(start_edges)
 	if len(start_edges)>0:
 		if start_edges[0] == binstart[0]:
 			start_edges = start_edges[1:]
 			stop_edges = stop_edges[1:]
-	return np.array(start_edges),np.array(stop_edges)
+	if max_snr:
+		max_snr_list = []
+		for i in range(len(start_edges)):
+			indexi = np.where((center>=start_edges[i])&(center<=stop_edges[i]))[0]
+			snri = SNR[indexi]
+			max_snr_list.append(snri.max())
+			
+		return np.array(start_edges),np.array(stop_edges),np.array(max_snr_list)
+	else:
+		return np.array(start_edges),np.array(stop_edges)
 
 def get_bayesian_flash(data,start_edges,stop_edges):
 	'''
@@ -342,7 +361,7 @@ def get_bayesian_txx(data,t_start,t_stop,txx = 0.9,it = 400,lamd = 100.):
 	index_sort = np.argsort(duration)[0]
 
 
-	if len(np.where((t>=t_start[index_sort]) & (t<= t_stop[index_sort]))[0])<100:#这里是为了提高精度
+	if len(np.where((t>=t_start[index_sort]) & (t<= t_stop[index_sort]))[0])<100:
 		d_t = (t_stop[index_sort]-t_start[index_sort])/100
 		print('dt for interp:',d_t)
 		t_l = np.arange(tmin_, tmax_ + d_t, d_t)

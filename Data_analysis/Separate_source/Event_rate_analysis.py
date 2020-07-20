@@ -20,7 +20,7 @@ class Event_rate_analysis(object):
 	def get_BPS(self):
 		edges = np.arange(self.time_start,self.time_stop+1,1)
 		bin_n,bin_edges = np.histogram(self.t,bins = edges)
-		bin_n = np.concatenate((bin_n[:1],bin_n[:-1],bin_n[-2:-1]))#去掉最后一个不完整块
+		bin_n = np.concatenate((bin_n[:1],bin_n[:-1],bin_n[-2:-1]))#Remove the last incomplete block
 		bs = TD_baseline(bin_edges,bin_n)[2]
 		BPS = np.interp(self.t,bin_edges,bs)
 		#rand = np.random.normal(BPS.size)*np.sqrt(BPS)
@@ -28,7 +28,7 @@ class Event_rate_analysis(object):
 	
 	def get_GPS(self,binsize = 1):
 		'''
-		等时切片，分析GPS，这样分析的结果存在切片精度的问题。
+		Isochronous slice, GPS analysis, the result of such analysis has the problem of slice accuracy.
 		:param binsize:
 		:return:
 		'''
@@ -44,7 +44,7 @@ class Event_rate_analysis(object):
 		return np.interp(self.t,bin_c,bin_rate)
 	def get_wt_GPS(self,dt = 1.024):
 		'''
-		使用WT分析GPS，计算量会大一些。分析结果不存在切片精度问题。
+		Using WT to analyze GPS will require more computation. There is no problem of slice accuracy in the analysis results.
 		:return:
 
 		'''

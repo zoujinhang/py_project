@@ -7,9 +7,9 @@ def transpose(data):
 
 def printdatatofile(file_name , data,format = None):
 	'''
-	写txt文件
-	:param file_name: 路径加文件名
-	:param data: 数据
+	Write a TXT file
+	:param file_name: Path plus filename
+	:param data: data
 	:param format:
 	:return:
 	'''
@@ -63,9 +63,9 @@ def readcol(file_name):
 
 def getfilelist(dir1):
 	'''
-	找出路径dir1下所有的路径和文件
+	Find all the paths and files under path DIR1
 	:param dir1:
-	:return: 字典
+	:return: The dictionary
 	'''
 	if (os.path.exists(dir1)):
 		dirnames = os.listdir(dir1)
@@ -150,9 +150,3 @@ def findfile(dir1,feature):
 		print('do not find the dir named ['+ dir1 + ']!\n')
 		return False
 	
-#dir = '/home/laojin/my_work/'
-#name = 'my_sample.txt'
-#resultdata = readcol(dir+name)
-
-#a = findfile(dir,'tte*_n0')
-#print(resultdata)

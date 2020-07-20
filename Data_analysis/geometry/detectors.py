@@ -2,11 +2,12 @@
 import numpy as np
 #from spherical_geometry.polygon import SphericalPolygon
 from astropy.coordinates import cartesian_to_spherical,SkyCoord,spherical_to_cartesian
-
+from scipy.interpolate import interp1d
+import  astropy.units as u
 
 class Detectors(object):
 	def __init__(self,local_az=None,local_zen = None,local_vector =None,
-	             name_list = None,color_list = None):
+	             name_list = None,color_list = None,effective_angle = None):
 		
 		if (local_az is not None) and (local_zen is not None) and (local_vector is None) :
 			self.vector = np.array(spherical_to_cartesian(1,local_az,local_zen)).T
@@ -50,15 +51,32 @@ class Detectors(object):
 					self.color_list = color_list
 				else:
 					self.color_list = ['#74787c']*len(self.vector)
+		if effective_angle is not None:
+			self.effective_angle = effective_angle*u.deg
+		else:
+			self.effective_angle = 60*u.deg
 		
-				
-	def input_quaternion(self,quaternion):
+	def get_angle_overlap(self):
+		position_array = self.vector.T
+		position = cartesian_to_spherical(position_array[0],position_array[1],position_array[2])
+		ra = position[2].deg
+		dec = position[1].deg
+		center_all = SkyCoord(ra = ra,dec = dec,frame = 'icrs',unit = 'deg')
+		c = {}
+		for index,di in enumerate(self.name_list):
+			centeri = center_all[index]
+			seq = center_all.separation(centeri)
+			dindx = (seq>0*u.deg)&(seq<=self.effective_angle)
+			c[di] = self.name_list[dindx]
+		return c
+	def input_quaternion(self,quaternion,time=None):
 		self.quaternion = quaternion
+		self.time = time
 		self.mat_list = []
 		for quaternion_i in self.quaternion:
 			self.mat_list.append(self.get_mat(quaternion_i[0], quaternion_i[1], quaternion_i[2], quaternion_i[3]))
-		self.detector_index, self.center_all = self.get_center()
-		
+		self.center_function,self.detector_index, self.center_all = self.get_center()
+
 	def get_mat(self,p1,p2,p3,p0):
 		mat = np.mat(np.zeros((3, 3)))
 		mat[0, 0] = p0 ** 2 + p1 ** 2 - p2 ** 2 - p3 ** 2
@@ -71,8 +89,46 @@ class Detectors(object):
 		mat[2, 1] = 2 * (p0 * p1 + p3 * p2)
 		mat[2, 2] = p0 ** 2 + p3 ** 2 - p1 ** 2 - p2 ** 2
 		return mat
-
 	def get_center(self):
+		
+		deter_f = {}
+		ra_list = []
+		dec_list = []
+		indexlist = []
+		for index, vector in enumerate(self.vector):
+			indexlist.append(index)
+			position_list = []
+			detector_index_list = []
+			
+			for mat in self.mat_list:
+				X = np.mat(vector).T
+				X1 = np.array(mat * X).T[0]
+				position_list.append([X1[0],X1[1],X1[2]])
+				detector_index_list.append(index)
+			position_array = np.array(position_list).T
+			position = cartesian_to_spherical(position_array[0],position_array[1],position_array[2])
+			ra = position[2].deg
+			dec = position[1].deg
+			ra_list.append(list(ra))
+			dec_list.append(list(dec))
+			if self.time is not None:
+				x_f = interp1d(self.time,position_array[0],kind = 'quadratic')
+				y_f = interp1d(self.time,position_array[1],kind = 'quadratic')
+				z_f = interp1d(self.time,position_array[2],kind = 'quadratic')
+				#ra_f = interp1d(self.time, ra, kind='slinear')
+				#dec_f = interp1d(self.time, dec, kind='slinear')
+				# ra_f = interp1d(self.time,ra,kind = 'cubic')
+				# dec_f = interp1d(self.time,dec,kind = 'cubic')
+				deter_f[self.name_list[index]] = [x_f,y_f,z_f]
+		ra_list = np.array(ra_list).T
+		dec_list = np.array(dec_list).T
+		center_all = SkyCoord(ra = ra_list,dec = dec_list,frame = 'icrs',unit = 'deg')
+		if self.time is  None:
+			deter_f = None
+		return deter_f,[indexlist]*len(self.mat_list),center_all
+	
+	'''
+	def get_center_old(self):
 		#print('get_center')
 		detector_index_list1 = []
 		center_all_list = []
@@ -94,7 +150,7 @@ class Detectors(object):
 			center_all_list.append(center_all)
 		return detector_index_list1,center_all_list
 	
-	'''
+	
 	def get_fov(self,radius):
 		if radius >= 60:
 			steps = 500

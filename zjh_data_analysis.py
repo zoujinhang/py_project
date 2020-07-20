@@ -399,8 +399,9 @@ def get_peak(t,value,order = 12,num = 10):
 		t_max = t_n[max_index]
 		t_array[i] = t_max
 
-	t_peak = t_array.sum()/t_array.size
-	return t_peak
+	#t_peak = t_array.sum()/t_array.size
+	#return t_peak
+	return t_max
 
 def get_lag(x1,x2,dt,x1_err = None,x2_err = None,num = 1000,order = 12,name = None,savedir = None):
 

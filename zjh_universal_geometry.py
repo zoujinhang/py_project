@@ -238,7 +238,7 @@ class Time_transition(object):
 		else:
 			utc_tt_diff = 69.184
 
-		mjdutc = ((met - utc_tt_diff) / 86400.0) + 51910 + 0.0007428703703
+		mjdutc = ((met - utc_tt_diff) / 86400.0) + 51910 + 0.0007428703703#7.428703703703703
 		met1 = time.Time(mjdutc,scale= 'utc',format = 'mjd')
 
 		return met1
