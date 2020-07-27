@@ -190,8 +190,11 @@ for i in range(n2_spc.shape[0]):
 	mul_dir = savedir+'A_n'+str(i)+'_out/'
 	if os.path.exists(mul_dir) ==False:
 		os.makedirs(mul_dir)
-	A = fit.run(outputfiles_basename=mul_dir+'A_n'+str(i)+'_',resume = False, verbose = True)
-	
+	A = fit.run(outputfiles_basename=mul_dir+'A_n'+str(i)+'_',resume = True, verbose = True)
+	chi2_all = fit.get_chi2_text(A)
+	p = chi2_all['p']
+	chi2_vale = chi2_all['chi2']
+	df = chi2_all['df']
 	equ_w = A.get_equal_weighted_posterior()
 	c = A.get_stats()['modes'][0]
 	'''
@@ -250,7 +253,7 @@ for i in range(n2_spc.shape[0]):
 	
 	#fig,ax = plt.subplots()
 	fig = plt.figure(constrained_layout=True,figsize=(8,11))
-	fig.suptitle('Multinest fit of band model')
+	fig.suptitle('Multinest fit of band model. chi2 p = '+str(p))
 	gs = GridSpec(4, 1, figure=fig)
 	ax1 = fig.add_subplot(gs[0:2])
 	fit.plot_data(A,n=0,ax = ax1,reference = True)
