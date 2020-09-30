@@ -1,4 +1,4 @@
-from Fermi_tool import *
+from Fermi_tool.burst import *
 import os
 import numpy as np
 import matplotlib.pyplot as plt

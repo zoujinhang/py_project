@@ -94,20 +94,20 @@ def prior_bb2(cube,ndim,nparams):
 	cube[2] = 10000*cube[2]
 	cube[3] = 10**(20*cube[3]-10)
 	
-#rsp_link_b0 = '/home/laojin/my_lat/spectrum/response_matrix/glg_cspec_b0_bn150330828_v00.rsp'
-#rsp_link_n2 = '/home/laojin/my_lat/spectrum/response_matrix/glg_cspec_n2_bn150330828_v00.rsp'
-#rsp_link_n1 = '/home/laojin/my_lat/spectrum/response_matrix/glg_cspec_n1_bn150330828_v00.rsp'
+rsp_link_b0 = '/home/laojin/my_lat/spectrum/response_matrix/glg_cspec_b0_bn150330828_v00.rsp'
+rsp_link_n2 = '/home/laojin/my_lat/spectrum/response_matrix/glg_cspec_n2_bn150330828_v00.rsp'
+rsp_link_n1 = '/home/laojin/my_lat/spectrum/response_matrix/glg_cspec_n1_bn150330828_v00.rsp'
 
-rsp_link_b0 = '/media/laojin/Elements/trigdata/2009/bn090809978/glg_cspec_b0_bn090809978_v01.rsp'
-rsp_link_n3 = '/media/laojin/Elements/trigdata/2009/bn090809978/glg_cspec_n3_bn090809978_v01.rsp'
-rsp_link_n4 = '/media/laojin/Elements/trigdata/2009/bn090809978/glg_cspec_n4_bn090809978_v01.rsp'
+#rsp_link_b0 = '/media/laojin/Elements/trigdata/2009/bn090809978/glg_cspec_b0_bn090809978_v01.rsp'
+#rsp_link_n3 = '/media/laojin/Elements/trigdata/2009/bn090809978/glg_cspec_n3_bn090809978_v01.rsp'
+#rsp_link_n4 = '/media/laojin/Elements/trigdata/2009/bn090809978/glg_cspec_n4_bn090809978_v01.rsp'
 
 
 
-datadir = '/home/laojin/my_lat/spectrum/bn090809978/'
-#datadir = '/home/laojin/my_lat/spectrum/A_spectrum1/'
-#savedir = '/home/laojin/my_lat/spectrum/A_spectrum1/'
-savedir = '/home/laojin/my_lat/spectrum/A_spectrum_bn090809978/'
+#datadir = '/home/laojin/my_lat/spectrum/bn090809978/'
+datadir = '/home/laojin/my_lat/spectrum/A_spectrum1/'
+savedir = '/home/laojin/my_lat/spectrum/A_spectrum1/'
+#savedir = '/home/laojin/my_lat/spectrum/A_spectrum_bn090809978/'
 if os.path.exists(savedir)==False:
 	os.makedirs(savedir)
 
@@ -128,8 +128,8 @@ model_bb2_pl_prior_list = [
 	Prior([-3,5])
 ]
 
-#n2 = h5py.File(datadir +'ZZ_spectrum_n2.hdf5','r')
-n2 = h5py.File(datadir +'ZZ_spectrum_n4.hdf5','r')
+n2 = h5py.File(datadir +'ZZ_spectrum_n2.hdf5','r')
+#n2 = h5py.File(datadir +'ZZ_spectrum_n4.hdf5','r')
 n2_spc = n2['spc'][()]
 n2_spc_err = n2['spc_err'][()]
 n2.close()
@@ -139,8 +139,8 @@ b0_spc = b0['spc'][()]
 b0_spc_err = b0['spc_err'][()]
 b0.close()
 
-#n1 = h5py.File(datadir +'ZZ_spectrum_n1.hdf5','r')
-n1 = h5py.File(datadir +'ZZ_spectrum_n3.hdf5','r')
+n1 = h5py.File(datadir +'ZZ_spectrum_n1.hdf5','r')
+#n1 = h5py.File(datadir +'ZZ_spectrum_n3.hdf5','r')
 n1_spc = n1['spc'][()]
 n1_spc_err = n1['spc_err'][()]
 n1.close()
@@ -152,7 +152,7 @@ kt1 = []
 kt2 = []
 a_list = []
 for i in range(n2_spc.shape[0]):
-#for i in range(567):
+#for i in range(663,len(n1_spc)):
 	#y_sp,y_sp_err = myfile.readcol(savedir +'ZZ_spectrum_n2_'+str(i)+'.txt')
 	#y_sp_n2 = np.array(y_sp)
 	#y_sp_err_n2 = np.array(y_sp_err)
@@ -160,8 +160,8 @@ for i in range(n2_spc.shape[0]):
 	y_sp_err_n2 = n2_spc_err[i]
 	
 	
-	#spectrum_n2 = Spectrum(y_sp_n2,y_sp_err_n2,rsp_link_n2,effective_band=[8,800],spectrum_name = 'n2')
-	spectrum_n2 = Spectrum(y_sp_n2,y_sp_err_n2,rsp_link_n4,effective_band=[8,800],spectrum_name = 'n4')
+	spectrum_n2 = Spectrum(y_sp_n2,y_sp_err_n2,rsp_link_n2,effective_band=[8,800],spectrum_name = 'n2')
+	#spectrum_n2 = Spectrum(y_sp_n2,y_sp_err_n2,rsp_link_n4,effective_band=[8,800],spectrum_name = 'n4')
 	
 	#y_sp,y_sp_err = myfile.readcol(savedir +'ZZ_spectrum_b0_'+str(i)+'.txt')
 	#y_sp_b0 = np.array(y_sp)
@@ -178,8 +178,8 @@ for i in range(n2_spc.shape[0]):
 	y_sp_n1 = n1_spc[i]
 	y_sp_err_n1 = n1_spc_err[i]
 	
-	#spectrum_n1 = Spectrum(y_sp_n1,y_sp_err_n1,rsp_link_n1,effective_band=[8,800],spectrum_name = 'n1')
-	spectrum_n1 = Spectrum(y_sp_n1,y_sp_err_n1,rsp_link_n3,effective_band=[8,800],spectrum_name = 'n3')
+	spectrum_n1 = Spectrum(y_sp_n1,y_sp_err_n1,rsp_link_n1,effective_band=[8,800],spectrum_name = 'n1')
+	#spectrum_n1 = Spectrum(y_sp_n1,y_sp_err_n1,rsp_link_n3,effective_band=[8,800],spectrum_name = 'n3')
 	parameters = ['log K','a','b','log Ec']
 	parameters2 = ['K','a0','a','b','E0','Ec']
 	parameters_bb2 = ['log K1','log kt1','log K2','log kt2']
@@ -191,10 +191,10 @@ for i in range(n2_spc.shape[0]):
 	if os.path.exists(mul_dir) ==False:
 		os.makedirs(mul_dir)
 	A = fit.run(outputfiles_basename=mul_dir+'A_n'+str(i)+'_',resume = True, verbose = True)
-	chi2_all = fit.get_chi2_text(A)
-	p = chi2_all['p']
-	chi2_vale = chi2_all['chi2']
-	df = chi2_all['df']
+	#chi2_all = fit.get_chi2_text(A)
+	#p = chi2_all['p']
+	#chi2_vale = chi2_all['chi2']
+	#df = chi2_all['df']
 	equ_w = A.get_equal_weighted_posterior()
 	c = A.get_stats()['modes'][0]
 	'''
@@ -253,7 +253,7 @@ for i in range(n2_spc.shape[0]):
 	
 	#fig,ax = plt.subplots()
 	fig = plt.figure(constrained_layout=True,figsize=(8,11))
-	fig.suptitle('Multinest fit of band model. chi2 p = '+str(p))
+	#fig.suptitle('Multinest fit of band model. chi2 p = '+str(p))
 	gs = GridSpec(4, 1, figure=fig)
 	ax1 = fig.add_subplot(gs[0:2])
 	fit.plot_data(A,n=0,ax = ax1,reference = True)

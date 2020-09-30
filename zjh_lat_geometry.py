@@ -25,9 +25,10 @@ dt = 1/24
 detectors = Detectors()
 fermi_time = Time_transform()
 fermi_gbm = Geometry(detector=detectors,time_base=fermi_time)
-fermi_gbm.input_pose(quaternion=q4,sc_pos=sic*u.km,time = t_c)
+fermi_gbm.input_pose(quaternion=q4,sc_pos=sic,pos_unit=u.km,time = t_c)
 tab = fermi_gbm.get_separation(index = 122,source = sourec)
-my_map = fermi_gbm.detector_plot(radius = 60,show_bodies=True,style = 'A',index = 122)
+highlight_list = ['n1','n2','n3']
+my_map = fermi_gbm.detector_plot(radius = 10,show_bodies=True,style = 'A',index = 117,highlight=highlight_list,time = t_c[117])
 plt.savefig(savedir + 'B_sky_map.png')
 plt.close()
 

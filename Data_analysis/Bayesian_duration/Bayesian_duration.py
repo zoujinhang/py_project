@@ -45,7 +45,8 @@ def background_correction(t,rate,edges,backgroundsize = 10,degree = 5,plot_save 
 			mean1 = background_pool.mean()
 			sigma1 = background_pool.std(ddof = 1)
 			binsize1 = binsize1 + sort_binsize[i]
-	print('The number of background blocks is %d.'%n)
+	#print('                                                   ',end='\r')
+	#print('The number of background blocks is %d.'%n,end='\r')
 	correction_t = np.array(correction_t)
 	correction_rate = np.array(correction_rate)
 	sort_t_index = np.argsort(correction_t)

@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.basemap import Basemap
 from astropy.time import Time
 import astropy.units as u
 from astropy.coordinates import cartesian_to_spherical,SkyCoord,get_sun,get_body_barycentric
@@ -12,7 +11,10 @@ from moviepy.editor import VideoClip
 from moviepy.video.io.bindings import mplfig_to_npimage
 from matplotlib.patches import Polygon
 import pandas as pd
-
+import cartopy.crs as ccrs
+from scipy.interpolate import interp1d
+#import matplotlib.patches as mpatches
+#from mpl_toolkits.basemap import Basemap
 
 class Geometry(object):
 	
@@ -46,14 +48,18 @@ class Geometry(object):
 			self.quaternion = quaternion[['QSJ_1', 'QSJ_2', 'QSJ_3', 'QSJ_4']].values
 			try:
 				self.met_time = quaternion['SCLK_UTC'].values
-				self.time  = self.Time_transition.batch_met_to_utc(self.met_time)
+				self.time = self.Time_transition.batch_met_to_utc(self.met_time)
+				self.time_band = [np.min(self.met_time),np.max(self.met_time)]
 			except:
 				self.met_time = None
+				self.time_band = None
 				self.time = None
 			try:
 				if pos_unit is not None:
+					self.pos_unit = pos_unit
 					self.sc_pos = quaternion[['POS_X','POS_Y','POS_Z']].values * pos_unit
 				else:
+					self.pos_unit = u.m
 					self.sc_pos = quaternion[['POS_X','POS_Y','POS_Z']].values * u.m
 			except:
 				self.sc_pos = None
@@ -63,28 +69,144 @@ class Geometry(object):
 				if (isinstance(time, str)):
 					self.met_time = self.Time_transition.utc_to_met(time)
 					self.time = Time(time)
+					self.time_band = None
 				else:
 					self.met_time = time
+					self.time_band = [np.min(self.met_time),np.max(self.met_time)]
 					self.time = self.Time_transition.batch_met_to_utc(time)
 			else:
 				self.met_time = None
 				self.time = None
+				self.time_band = None
 			self.sc_pos = sc_pos
 			if pos_unit is not None:
+				self.pos_unit = pos_unit
 				self.sc_pos = self.sc_pos * pos_unit
-			
+			else:
+				self.pos_unit = u.m
+		if self.sc_pos is not None and self.met_time is not None:
+			if len(self.met_time)>1 and len(self.sc_pos[:,0])>1:
+				
+				x = self.sc_pos[:,0]
+				y = self.sc_pos[:,1]
+				z = self.sc_pos[:,2]
+				#print('me_time\n',self.met_time)
+				new_t = self.met_time
+				new_t[0] = new_t[0]-1
+				new_t[-1] = new_t[-1]+1
+				#print('x\n',x)
+				x_f = interp1d(new_t,-x,kind = 'quadratic')
+				y_f = interp1d(new_t,-y,kind = 'quadratic')
+				z_f = interp1d(new_t,-z,kind = 'quadratic')
+				self.sc_pos_f = [x_f,y_f,z_f]
+			else:
+				self.sc_pos_f = None
+		else:
+			self.sc_pos_f = None
 			
 		self.index = np.arange(len(self.quaternion),dtype = int)
 		self.radius = ef_radius
 		self.detectors.input_quaternion(self.quaternion,self.met_time)
 		
 		#self.all_sky = self.all_sky(num_points = 2000)
+	def get_detector_centers_with_time(self,t):
+		deter_name = self.detectors.name_list
+		center_f = self.detectors.center_function
+		if center_f is not None and self.time_band is not None:
+			ra_t_all = []
+			dec_t_all = []
+			index_all = []
+			try:
+				
+				n_=len(t)
+				t = np.array(t)
+				tband = t.max()-t.min()
+				tband_sl = self.time_band[1] - self.time_band[0]
+				if tband<=tband_sl+2:
+					t[t<=self.time_band[0]] = self.time_band[0]+0.00001
+					t[t>=self.time_band[1]] = self.time_band[1]-0.00001
+				else:
+					t[t<=self.time_band[0]] = np.nan
+					t[t>=self.time_band[1]] = np.nan
+				
+				for index_,deteri in enumerate(deter_name):
+					index_all.append(index_)
+					xf,yf,zf = center_f[deteri]
+					x = xf(t)
+					y = yf(t)
+					z = zf(t)
+					position = cartesian_to_spherical(x,y,z)
+					ra_t = position[2].deg
+					dec_t = position[1].deg
+					ra_t_all.append(list(ra_t))
+					dec_t_all.append(list(dec_t))
+				ra_t_all = np.array(ra_t_all).T
+				dec_t_all = np.array(dec_t_all).T
+				center = SkyCoord(ra = ra_t_all,dec = dec_t_all,frame='icrs', unit='deg')
+				return center,[index_all]*n_
+			except (TypeError):
+				
+				if (t<=self.time_band[0]):
+					if (self.time_band[0]-t<=1):
+						t = self.time_band[0]+0.00001
+					else:
+						t = np.nan
+				if t>=self.time_band[1]:
+					if (t-self.time_band[0]<=1):
+						t = self.time_band[1]-0.00001
+					else:
+						t = np.nan
+				for index_,deteri in enumerate(deter_name):
+					index_all.append(index_)
+					xf,yf,zf = center_f[deteri]
+					x = xf(t)
+					y = yf(t)
+					z = zf(t)
+					position = cartesian_to_spherical(x,y,z)
+					ra_t = position[2].deg
+					dec_t = position[1].deg
+					ra_t_all.append(ra_t)
+					dec_t_all.append(dec_t)
+				center = SkyCoord(ra = ra_t_all,dec = dec_t_all,frame='icrs', unit='deg')
+				return center,index_all
+		else:
+			return None
+	def get_good_detector_centers_with_time(self,t,source):
+		
+		centers = self.get_detector_centers_with_time(t)
+		if centers is None:
+			return None
+		good_detector_centers = []
+		good_detector_index = []
+		try:
+			for i in range(len(t)):
+				center_all = centers[i]
+				condition = center_all.separation(source)<=self.radius * u.degree
+				good_detector_index.append(condition)
+				good_detector_centers.append(center_all[condition])
+			return good_detector_index, good_detector_centers
+		except (TypeError):
+			
+			condition = centers.separation(source)<=self.radius * u.degree
+			return condition,centers[condition]
+		
 	
+		
 	def get_separation_with_time(self,t,source):
 		deter_name = self.detectors.name_list
 		center_f = self.detectors.center_function
-		if center_f is not None:
+		if center_f is not None and self.time_band is not None:
 			retr = {'time':t}
+			t = np.array(t)
+			if t.size >0:
+				tband = t.max()-t.min()
+				tband_sl = self.time_band[1] - self.time_band[0]
+				if tband<=tband_sl+2:
+					t[t<=self.time_band[0]] = self.time_band[0]+0.00001
+					t[t>=self.time_band[1]] = self.time_band[1]-0.00001
+				else:
+					t[t<=self.time_band[0]] = np.nan
+					t[t>=self.time_band[1]] = np.nan
 			for deteri in deter_name:
 				xf,yf,zf = center_f[deteri]
 				x = xf(t)
@@ -187,12 +309,66 @@ class Geometry(object):
 	def get_fov(self,conter,radius = 10.):
 		fov_point_list = []
 		for conter_i in conter:
-			poly = SphericalPolygon.from_cone(conter_i.ra.value,conter_i.dec.value,radius,steps=100)
-			x,y = [p for p in poly.to_radec()][0]
+			poly = SphericalPolygon.from_cone(conter_i.ra.value,conter_i.dec.value,radius,steps=180)
+			x,y = np.array(list(poly.to_radec())[0])
 			fov_point_list.append([radius,x,y])
 		return fov_point_list
+	def get_earth_point_with_time(self,t):
 		
-		
+		earth_radius = 6371. * u.km
+		if self.sc_pos_f is not None and self.time_band is not None:
+			x_f, y_f, z_f = self.sc_pos_f
+			try:
+				n = len(t)
+				t = np.array(t)
+				tband = t.max() - t.min()
+				tband_sl = self.time_band[1] - self.time_band[0]
+				if tband <= tband_sl + 2:
+					t[t <= self.time_band[0]] = self.time_band[0] + 0.00001
+					t[t >= self.time_band[1]] = self.time_band[1] - 0.00001
+				else:
+					t[t <= self.time_band[0]] = np.nan
+					t[t >= self.time_band[1]] = np.nan
+					
+				x = x_f(t) * self.pos_unit
+				y = y_f(t) * self.pos_unit
+				z = z_f(t) * self.pos_unit
+				earth_point_list = []
+				for i in range(n):
+					position = cartesian_to_spherical(x[i],y[i],z[i])
+					xyz_position = SkyCoord(position[2].deg,position[1].deg,frame='icrs',unit='deg')
+					fermi_radius = np.sqrt(x[i]**2 + y[i]**2 + z[i]**2)
+					radius_deg = np.rad2deg(np.arcsin((earth_radius / fermi_radius).to(u.dimensionless_unscaled)).value)
+					poly = SphericalPolygon.from_cone(position[2].deg,position[1].deg,radius_deg,steps=180)
+					x_,y_ = np.array(list(poly.to_radec())[0])
+					earth_point_list.append([xyz_position,radius_deg,x_,y_])
+				return earth_point_list
+			except 	(TypeError):
+				
+				if (t<=self.time_band[0]):
+					if (self.time_band[0]-t<=1):
+						t = self.time_band[0]+0.00001
+					else:
+						t = np.nan
+				if t>=self.time_band[1]:
+					if (t-self.time_band[0]<=1):
+						t = self.time_band[1]-0.00001
+					else:
+						t = np.nan
+				x = x_f(t) * self.pos_unit
+				y = y_f(t) * self.pos_unit
+				z = z_f(t) * self.pos_unit
+				position = cartesian_to_spherical(x,y,z)
+				xyz_position = SkyCoord(position[2].deg,position[1].deg,frame='icrs',unit='deg')
+				fermi_radius = np.sqrt(x**2 + y**2 + z**2)
+				radius_deg = np.rad2deg(np.arcsin((earth_radius / fermi_radius).to(u.dimensionless_unscaled)).value)
+				poly = SphericalPolygon.from_cone(position[2].deg,position[1].deg,radius_deg,steps=180)
+				x_,y_ = np.array(list(poly.to_radec())[0])
+				return xyz_position,radius_deg,x_,y_
+		else:
+			return None
+			
+			
 	def get_earth_point(self,index = None):
 		if self.sc_pos is not None:
 			earth_point_list = []
@@ -206,109 +382,163 @@ class Geometry(object):
 				earth_radius = 6371. * u.km
 				fermi_radius = np.sqrt((sc_pos ** 2).sum())
 				radius_deg = np.rad2deg(np.arcsin((earth_radius / fermi_radius).to(u.dimensionless_unscaled)).value)
-				poly = SphericalPolygon.from_cone(position[2].deg,position[1].deg,radius_deg,steps=100)
-				x,y = [p for p in poly.to_radec()][0]
+				poly = SphericalPolygon.from_cone(position[2].deg,position[1].deg,radius_deg,steps=180)
+				x,y = np.array(list(poly.to_radec())[0])
 				earth_point_list.append([xyz_position,radius_deg,x,y])
 			return earth_point_list
 		else:
 			print('No satellite position!')
 			return None
 			
-	def detector_plot(self,radius = 10.0,source=None,points = None,good = False,projection = 'moll',
-	                  lat_0 = 0,lon_0 = 180,ax = None,show_bodies = False,
-	                  style = 'A',index = None):
+	def detector_plot(self,radius = 10.0,source=None,points = None,good = False,highlight = None,
+	                  highlight_color = '#f26522',
+	                  lon_0 = 180,ax = None,show_bodies = False,avoid_pole = True,time =None,
+	                  style = 'A',index = 0,size = 1):
 		#pole = SkyCoord([0, 0], [90, -90], frame='icrs', unit='deg')
 		if ax is None:
 			fig = plt.figure(figsize = (20,10))
-			ax = fig.add_subplot(1,1,1)
-			ax.set_title(str(index))
-		map = Basemap(projection=projection,lat_0=lat_0,lon_0 = lon_0,resolution = 'l',area_thresh=1000.0,celestial=True,ax = ax)
-
-		if good and source :
-			index_,centor = self.get_good_detector_centers(source,index = [index])
-			index_ = index_[0]
-			centor = centor[0]
+			ax = fig.add_subplot(1,1,1,projection=ccrs.Mollweide(central_longitude=lon_0),facecolor = '#f6f5ec')
+			
+		xticks = list(range(-180, 180, 30))
+		yticks = list(range(-90, 90, 15))
+			
+		lons_x = np.arange(0,360,30)
+		lons_y = np.zeros(lons_x.size)
+		lats_y = np.arange(-75,76,15)
+		lats_x = np.zeros(lats_y.size)
+			
+		ax.gridlines(xlocs=xticks, ylocs=yticks)
+		lats_y_ticke = ax.projection.transform_points(ccrs.Geodetic(),lats_x+lon_0+180.0, lats_y*1.1)
+		lats_y_x = lats_y_ticke[:,0]*0.86
+		lats_y_y = lats_y_ticke[:,1]
+			
+		proj_xyz = ax.projection.transform_points(ccrs.Geodetic(),np.array([0,30]), np.array([0,0]))
+		dx_ = np.abs(proj_xyz[0][0]-proj_xyz[1][0])
+		for indexi,i in enumerate(lons_x):
+			ax.text(i,lons_y[indexi],r'$%d^{\circ}$'%i,transform = ccrs.Geodetic(),size = 20*size)
+		for indexi,i in enumerate(lats_y):
+			ax.text(lats_y_x[indexi]+dx_,lats_y_y[indexi],r'$%d^{\circ}$'%i,size = 20*size,ha = 'right',va = 'center')
+		ax.set_global()
+		ax.invert_xaxis()
+			
+			
+		if time is not None:
+			utc = self.Time_transition.met_to_utc(time)
+			ax.set_title(str(utc.fits),size = 20*size)
 		else:
-			index_ = self.get_detector_index(index=[index])[0]
-			centor = self.get_detector_centers(index = [index])[0]
-		if show_bodies and self.sc_pos is not None:
+			ax.set_title(str(index),size = 20*size)
+			
+		if good and source :
+			if time is not None and self.met_time is not None:
+				index_,centor = self.get_good_detector_centers_with_time(time,source=source)
+			else:
+				index_,centor = self.get_good_detector_centers(source,index = [index])
+				index_ = index_[0]
+				centor = centor[0]
+		else:
+			if time is not None:
+				centor,index_ = self.get_detector_centers_with_time(time)
+			else:
+				index_ = self.get_detector_index(index=[index])[0]
+				centor = self.get_detector_centers(index = [index])[0]
+			
+			
+		if show_bodies and self.sc_pos is not None :
 			#print('plot_earth!')
-			if projection in ['moll']:
-				
-				postion, r, lon, lat = self.get_earth_point(index=[index])[0]
-				#poly_list = get_circle(postion,r,lon_0,map,facecolor='#90d7ec',edgecolor='#90d7ec',linewidth=0, alpha=1)
-				poly_list = get_poly(postion, r, lon, lat,lon_0,map,facecolor='#90d7ec',edgecolor='#90d7ec',linewidth=0, alpha=1)
-				for i in poly_list:
-					ax.add_patch(i)
+			if time is not None and self.met_time is not None:
+				postion, r, lon, lat = self.get_earth_point_with_time(time)
 			else:
 				postion, r, lon, lat = self.get_earth_point(index=[index])[0]
-				lon, lat = map(lon, lat)
-				earth = Polygon(list(zip(lon, lat)), facecolor='#90d7ec', edgecolor='#90d7ec',
-				                linewidth=2, alpha=1)
-				ax.add_patch(earth)
+			if avoid_pole:
+				lat[lat>88.0]=88.0
+				lat[lat<-88.0]=-88.0
+			#print(lat)
+			#ax.plot( lon, lat,'-',color = 'k',transform=ccrs.Geodetic(),linewidth=5)
+			earth = Polygon(list(zip(lon, lat))[::-1], facecolor='#90d7ec', edgecolor='#90d7ec',
+			                linewidth=2*size, alpha=1,transform=ccrs.Geodetic())
+			ax.add_patch(earth)
+			#ax.add_patch(mpatches.Circle(xy=[postion.ra.value,postion.dec.value],transform=ccrs.Geodetic(), radius=r, color='#90d7ec', alpha=1, zorder=0))
 			if self.time is not None:
-				#print(self.time)
-				earth_r = get_body_barycentric('earth', self.time[index])
-				moon_r = get_body_barycentric('moon', self.time[index])
+				if time is not None:
+					time_utc = self.Time_transition.met_to_utc(time)
+					earth_r = get_body_barycentric('earth', time_utc)
+					moon_r = get_body_barycentric('moon',time_utc )
+					
+				else:
+					earth_r = get_body_barycentric('earth', self.time[index])
+					moon_r = get_body_barycentric('moon', self.time[index])
+					
 				r_e_m = moon_r - earth_r
-				r = self.sc_pos[index] - np.array([r_e_m.x.value, r_e_m.y.value, r_e_m.z.value]) * u.km
+				
+				if time is not None:
+					if time <=self.time_band[0]:
+						if self.time_band[0]-time<=1:
+							time = self.time_band[0]+0.00001
+						else:
+							print(time,self.time_band)
+							time = np.nan
+					if time >= self.time_band[1]:
+						if time - self.time_band[1] <=1:
+							time =  self.time_band[1]-0.00001
+						else:
+							print(time,self.time_band)
+							time = np.nan
+					x_f, y_f, z_f = self.sc_pos_f
+					x = x_f(time)
+					y = y_f(time)
+					z = z_f(time)
+					r = -np.array([x,y,z])*self.pos_unit - np.array([r_e_m.x.value, r_e_m.y.value, r_e_m.z.value]) * u.km
+				else:
+					r = self.sc_pos[index] - np.array([r_e_m.x.value, r_e_m.y.value, r_e_m.z.value]) * u.km
+				
 				moon_point_d = cartesian_to_spherical(-r[0], -r[1], -r[2])
 				moon_ra, moon_dec = moon_point_d[2].deg, moon_point_d[1].deg
 				moon_point = SkyCoord(moon_ra, moon_dec, frame='icrs', unit='deg')
-				moon_ra, moon_dec = map(moon_point.ra.deg, moon_point.dec.deg)
-				map.plot(moon_ra, moon_dec, 'o', color='#72777b', markersize=20)
-				plt.text(moon_ra, moon_dec - 800000, 'moon', size=20)
+				
+				#moon_ra, moon_dec = map(moon_point.ra.deg, moon_point.dec.deg)
+				ax.plot(moon_point.ra.deg, moon_point.dec.deg, 'o', color='#72777b', markersize=20*size,transform=ccrs.Geodetic())
+				ax.text(moon_point.ra.deg, moon_point.dec.deg, 'moon', size=20*size,transform=ccrs.Geodetic(),va = 'center',ha='center')
 			if show_bodies and self.time is not None:
-				tmp_sun = get_sun(self.time[index])
+				if time is not None:
+					time_utc = self.Time_transition.met_to_utc(time)
+					tmp_sun = get_sun(time_utc)
+				else:
+					tmp_sun = get_sun(self.time[index])
 				sun_position = SkyCoord(tmp_sun.ra.deg, tmp_sun.dec.deg, unit='deg', frame='icrs')
-				sun_ra, sun_dec = map(sun_position.ra.value, sun_position.dec.value)
-				map.plot(sun_ra, sun_dec, 'o', color='#ffd400', markersize=40)
-				plt.text(sun_ra - 550000, sun_dec - 200000, 'sun', size=20)
+				ax.plot(sun_position.ra.value, sun_position.dec.value, 'o', color='#ffd400', markersize=40*size,transform=ccrs.Geodetic())
+				ax.text(sun_position.ra.value, sun_position.dec.value, 'sun', size=20*size,transform=ccrs.Geodetic(),va = 'center',ha='center')
 		
 		fovs = self.get_fov(centor, radius)
-		if projection in ['moll']:
-			for i,v in enumerate(index_):
-				r,ra,dec = fovs[i]
-				#print(str(self.detectors.name_list[v]))
-				#poly_list = get_circle(centor[i],radius,lon_0,map,facecolor=self.detectors.color_list[v],edgecolor=self.detectors.color_list[v],linewidth=2, alpha=0.5)
-				poly_list = get_poly(centor[i],r,ra,dec,lon_0,map,facecolor=self.detectors.color_list[v],edgecolor=self.detectors.color_list[v],linewidth=2, alpha=0.5)
-				#print(lon_lis, lat_lis)
-				for ij in poly_list:
-					ax.add_patch(ij)
-				ra_x,dec_y = map(centor[i].ra.value+2.5,centor[i].dec.value-1)
-				plt.text(ra_x, dec_y,str(self.detectors.name_list[v]), color=self.detectors.color_list[v], size=22)
-		else:
-			for i,v in enumerate(index_):
-				r,ra,dec = fovs[i]
-				detec = Polygon(list(zip(ra,dec)),facecolor=self.detectors.color_list[v],edgecolor=self.detectors.color_list[v],linewidth=2, alpha=0.5)
-				ax.add_patch(detec)
-				ra_x,dec_y = map(centor[i].ra.value+2.5,centor[i].dec.value-1)
-				plt.text(ra_x, dec_y,str(self.detectors.name_list[v]), color=self.detectors.color_list[v], size=22)
+		
+		for i,v in enumerate(index_):
+			r,ra,dec = fovs[i]
+			name_ = self.detectors.name_list[v]
+			
+			if avoid_pole:
+				dec[dec>88.0]=88.0
+				dec[dec<-88.0]=-88.0
+			if highlight is not None:
+				if name_ in highlight:
+					color_ = highlight_color
+				else:
+					color_ = self.detectors.color_list[v]
+			else:
+				color_ = self.detectors.color_list[v]
+			detec = Polygon(list(zip(ra,dec))[::-1],facecolor=color_,edgecolor=color_,linewidth=2*size, alpha=0.5,transform=ccrs.Geodetic())
+			ax.add_patch(detec)
+			plt.text(centor[i].ra.value, centor[i].dec.value,str(name_), color=self.detectors.color_list[v], size=22*size,transform=ccrs.Geodetic(),va = 'center',ha='center')
 		
 		if source:
-			ra, dec = map(source.ra.value, source.dec.value)
-			map.plot(ra, dec, '*', color='#f36c21', markersize=20.)
+			ax.plot(source.ra.value, source.dec.value, '*', color='#f36c21', markersize=20.*size,transform=ccrs.Geodetic())
 		if points:
-			ra, dec = map(points.ra.value, points.dec.value)
-			map.plot(ra, dec, '*', color='#c7a252', markersize=20.)
+			
+			ax.plot(points.ra.value, points.dec.value, '*', color='#c7a252', markersize=20.*size,transform=ccrs.Geodetic())
+			
+		return ax
 		
-		if projection == 'moll':
-			az1 = np.arange(0, 360, 30)
-			zen1 = np.zeros(az1.size) + 2
-			azname = []
-			for i in az1:
-				azname.append(r'${\/%s\/^{\circ}}$' % str(i))
-			x1, y1 = map(az1, zen1)
-			for index1, value in enumerate(az1):
-				plt.text(x1[index1], y1[index1], azname[index1], size=20)
-		map.drawmeridians(np.arange(0, 360, 30),dashes=[1,0],color='#d9d6c3')
-		map.drawparallels(np.arange(-90, 90, 15),dashes=[1,0], labels=[1,0,0,1], color='#d9d6c3',size = 20)
-		map.drawmapboundary(fill_color='#f6f5ec')
-		return map
+	def detector_video(self,dt,savevdir,radius = 10.0,source=None,points = None,good = False,
+	                   lon_0 = 180.,ax = None,show_bodies = False,style = 'A'):
 		
-	def detector_video(self,dt,savevdir,radius = 10.0,source=None,points = None,good = False,projection = 'moll',
-	                   lat_0 = 0,lon_0 = 180.,ax = None,show_bodies = False,style = 'A'):
-		pole = SkyCoord([0, 0], [90, -90], frame='icrs', unit='deg')
 		name_list = self.detectors.name_list
 		color_list = self.detectors.color_list
 		
@@ -328,38 +558,41 @@ class Geometry(object):
 		else:
 			time = None
 		#fig,ax = plt.subplots()
-		fig = plt.figure(figsize=(20, 10))
-		ax = fig.add_subplot(111)
+		fig = plt.figure(figsize = (20,10))
+		ax = fig.add_subplot(1,1,1,projection=ccrs.Mollweide(central_longitude=lon_0),facecolor = '#f6f5ec')
 		duration = dt * len(self.index)
+		xticks = list(range(-180, 180, 30))
+		yticks = list(range(-90, 90, 15))
+		
+		lons_x = np.arange(0,360,30)
+		lons_y = np.zeros(lons_x.size)
+		lats_y = np.arange(-75,76,15)
+		lats_x = np.zeros(lats_y.size)
 		
 		def make_frame(t):
 			n = int(t/dt)
 			ax.clear()
 			ax.set_title(str(n))
-			map = Basemap(projection=projection,lat_0=lat_0,lon_0 = lon_0,resolution = 'l',area_thresh=1000.0,celestial=True,ax = ax)
+			#map = Basemap(projection=projection,lat_0=lat_0,lon_0 = lon_0,resolution = 'l',area_thresh=1000.0,celestial=True,ax = ax)
 			index_,centor = index_list[n],centor_list[n]
 			
 			if source:
-				ra, dec = map(source.ra.value, source.dec.value)
-				map.plot(ra, dec, '*', color='#f36c21', markersize=20.)
+				#ra, dec = map(source.ra.value, source.dec.value)
+				ax.plot(source.ra.value, source.dec.value, '*', color='#f36c21', markersize=20., transform=ccrs.Geodetic())
 			if points:
-				ra, dec = map(points.ra.value, points.dec.value)
-				map.plot(ra, dec, '*', color='#c7a252', markersize=20.)
+				ax.plot(points.ra.value, points.dec.value, '*', color='#c7a252', markersize=20., transform=ccrs.Geodetic())
 			if show_bodies and sc_pos is not None:
-				if projection in ['moll']:
-					
-					postion, r, lon, lat = earth_points_list[n]
-					#poly_list = get_circle(postion, r, lon_0, map, facecolor='#90d7ec',edgecolor='#90d7ec', linewidth=0, alpha=1)
-					poly_list = get_poly(postion, r, lon, lat, lon_0, map, facecolor='#90d7ec',edgecolor='#90d7ec', linewidth=0, alpha=1)
-					# lon_lis, lat_lis = get_poly(postion, r, lon, lat, pole,lon_0)
-					for i in poly_list:
-						ax.add_patch(i)
-				else:
-					postion, r, lon, lat = earth_points_list[n]
-					lon, lat = map(lon, lat)
-					earth = Polygon(list(zip(lon, lat)), facecolor='#90d7ec', edgecolor='#90d7ec',
-					                linewidth=2, alpha=1)
-					ax.add_patch(earth)
+				
+				postion, r, lon, lat = earth_points_list[n]
+				lat[lat > 88.0] = 88.0
+				lat[lat < -88.0] = -88.0
+				#lon, lat = map(lon, lat)
+				earth = Polygon(list(zip(lon, lat))[::-1], facecolor='#90d7ec', edgecolor='#90d7ec',
+					         linewidth=2, alpha=1, transform=ccrs.Geodetic())
+				ax.add_patch(earth)
+				#ax.add_patch(mpatches.Circle(xy=[postion.ra.value, postion.dec.value], radius=r,
+				#                             color='#90d7ec', alpha=0.3, transform=ccrs.Geodetic(),
+				#                             zorder=0))
 				if time is not None:
 					earth_r = get_body_barycentric('earth',time[n])
 					moon_r = get_body_barycentric('moon',time[n])
@@ -368,50 +601,41 @@ class Geometry(object):
 					moon_point_d = cartesian_to_spherical(-r[0],-r[1],-r[2])
 					moon_ra,moon_dec = moon_point_d[2].deg,moon_point_d[1].deg
 					moon_point = SkyCoord(moon_ra,moon_dec,frame='icrs', unit='deg')
-					moon_ra,moon_dec = map(moon_point.ra.deg,moon_point.dec.deg)
-					map.plot(moon_ra,moon_dec,'o',color = '#72777b',markersize = 20)
-					plt.text(moon_ra,moon_dec-800000,'moon',size = 20)
+					ax.plot(moon_point.ra.deg,moon_point.dec.deg,'o',color = '#72777b',markersize = 20,transform=ccrs.Geodetic())
+					ax.text(moon_point.ra.deg,moon_point.dec.deg,'moon',size = 20,transform=ccrs.Geodetic(),va = 'center',ha='center')
 				if show_bodies and time is not None:
 					tmp_sun = get_sun(time[n])
 					sun_position = SkyCoord(tmp_sun.ra.deg,tmp_sun.dec.deg,unit='deg', frame='icrs')
-					sun_ra,sun_dec = map(sun_position.ra.value,sun_position.dec.value)
-					map.plot(sun_ra,sun_dec ,'o',color = '#ffd400',markersize = 40)
-					plt.text(sun_ra-550000,sun_dec-200000,'sun',size = 20)
+					ax.plot(sun_position.ra.value,sun_position.dec.value ,'o',color = '#ffd400', markersize=40,transform=ccrs.Geodetic())
+					ax.text(sun_position.ra.value,sun_position.dec.value,'sun',size = 20,transform=ccrs.Geodetic(),va = 'center',ha='center')
+					
 			fovs = get_fov(centor,radius)
-			if projection in ['moll']:
-				for i,v in enumerate(index_):
-					r,ra,dec = fovs[i]
-					#poly_list = get_circle(centor[i], radius, lon_0, map,facecolor=color_list[v],edgecolor=color_list[v], linewidth=2,alpha=0.5)
-					poly_list = get_poly(centor[i], r, ra, dec, lon_0, map, facecolor=color_list[v],edgecolor=color_list[v], linewidth=2, alpha=0.5)
-					# print(str(self.detectors.name_list[v]))
-					# print(lon_lis, lat_lis)
-					for ij in poly_list:
-						ax.add_patch(ij)
-					ra_x,dec_y = map(centor[i].ra.value+2.5,centor[i].dec.value-1)
-					plt.text(ra_x, dec_y,str(name_list[v]), color=color_list[v], size=22)
-			else:
-				for i,v in enumerate(index_):
-					r,ra,dec = fovs[i]
-					detec = Polygon(list(zip(ra,dec)),facecolor=color_list[v],edgecolor=color_list[v],linewidth=2, alpha=0.5)
-					ax.add_patch(detec)
-					ra_x,dec_y = map(centor[i].ra.value+2.5,centor[i].dec.value-1)
-					plt.text(ra_x, dec_y,str(name_list[v]), color=color_list[v], size=22)
 			
 			
+			for i,v in enumerate(index_):
+				r,ra,dec = fovs[i]
+				dec[dec > 88.0] = 88.0
+				dec[dec < -88.0] = -88.0
+				detec = Polygon(list(zip(ra,dec))[::-1],facecolor=color_list[v],edgecolor=color_list[v],linewidth=2, alpha=0.5,transform=ccrs.Geodetic())
+				ax.add_patch(detec)
+				#ra_x,dec_y = map(centor[i].ra.value+2.5,centor[i].dec.value-1)
+				ax.text(centor[i].ra.value, centor[i].dec.value,str(name_list[v]), color=color_list[v], size=22,transform=ccrs.Geodetic(),va = 'center',ha='center')
 			
-			if projection == 'moll':
-				az1 = np.arange(0, 360, 30)
-				zen1 = np.zeros(az1.size) + 2
-				azname = []
-				for i in az1:
-					azname.append(r'${\/%s\/^{\circ}}$' % str(i))
-				x1, y1 = map(az1, zen1)
-				for index1, value in enumerate(az1):
-					plt.text(x1[index1], y1[index1], azname[index1], size=20)
-			map.drawmeridians(np.arange(0, 360, 30),dashes=[1,0],color='#d9d6c3')
-			map.drawparallels(np.arange(-90, 90, 15),dashes=[1,0], labels=[1,0,0,1], color='#d9d6c3',size = 20)
-			map.drawmapboundary(fill_color='#f6f5ec')
-			n = n + 1
+			ax.gridlines(xlocs=xticks, ylocs=yticks)
+			lats_y_ticke = ax.projection.transform_points(ccrs.Geodetic(),lats_x+lon_0+180.0, lats_y*1.1)
+			lats_y_x = lats_y_ticke[:,0]*0.86
+			lats_y_y = lats_y_ticke[:,1]
+			
+			proj_xyz = ax.projection.transform_points(ccrs.Geodetic(),np.array([0,30]), np.array([0,0]))
+			dx_ = np.abs(proj_xyz[0][0]-proj_xyz[1][0])
+			for indexi,i in enumerate(lons_x):
+				ax.text(i,lons_y[indexi],r'$%d^{\circ}$'%i,transform = ccrs.Geodetic(),size = 20)
+			for indexi,i in enumerate(lats_y):
+				ax.text(lats_y_x[indexi]+dx_,lats_y_y[indexi],r'$%d^{\circ}$'%i,size = 20,ha = 'right',va = 'center')
+			ax.set_global()
+			ax.invert_xaxis()
+			
+			#n = n + 1
 			return mplfig_to_npimage(fig)
 		animation = VideoClip(make_frame, duration=duration)
 		#animation.write_videofile(savevdir, fps=1/dt,codec = 'h264')
