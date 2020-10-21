@@ -13,7 +13,7 @@ class Separate_source(object):
 	'''
 	def __init__(self,t,ch,ch_n,
 		     time_range = None,
-		     WT = True
+		     WT = True,check_bg = False
 	             ):
 
 		if time_range is None:
@@ -24,14 +24,16 @@ class Separate_source(object):
 		else:
 			self.time_start = time_range[0]
 			self.time_stop = time_range[-1]
-			self.t = t[np.where((t>=self.time_start)&(t<=self.time_stop))]
-			self.ch = ch[np.where((t>=self.time_start)&(t<=self.time_stop))]
+			index_ = np.where((t>=self.time_start-0.5)&(t<=self.time_stop+0.5))[0]
+			self.t = t[index_]
+			self.ch = ch[np.where(index_)]
 		#self.t = t
 		#self.ch = ch
 		self.WT = WT
 		self.ch_n = ch_n
 		self.get_background()
-		self.check_background()
+		if check_bg:
+			self.check_background()
 		
 	def separate_background_for_one_ch(self,t,ch,ch_n):
 		t = t[np.where(ch == ch_n)]
@@ -47,6 +49,7 @@ class Separate_source(object):
 		#print('BPS \n',BPS)
 		mc = MC_separate(t,GPS,BPS)
 		return mc.S,mc.B
+
 	def get_background(self):
 
 		s = np.array([])
@@ -69,6 +72,8 @@ class Separate_source(object):
 		self.s_ch = s_ch[s_index]
 		self.b_t = b[b_index]
 		self.b_ch = b_ch[b_index]
+
+
 	def check_background(self):
 		'''
 		Background check. First check the background one by one, then check the general background to prevent the background from crossing.
@@ -105,8 +110,11 @@ class Separate_source(object):
 		self.s_ch = c_s_ch[sort_index]
 	
 	def get_S_t_and_ch(self):
+
 		return self.s_t,self.s_ch
+
 	def get_B_t_and_ch(self):
+
 		return self.b_t,self.b_ch
 	
 

@@ -1,9 +1,11 @@
+
+import numpy as np
 import cartopy.crs as ccrs
 import cartopy.geodesic as ccrsge
 
 import matplotlib.pyplot as plt
 import os
-import numpy as np
+
 from copy import copy
 import shapely.geometry as sgeom
 from spherical_geometry.polygon import SphericalPolygon
@@ -167,7 +169,7 @@ ax.text(proj_xyz[0][0],proj_xyz[0][1],'240+15',size = 20,ha = 'right')
 dx_ = np.abs(proj_xyz[0][0]-proj_xyz[1][0])
 #print(proj_xyz)
 
-lats_y_ticke = ax.projection.transform_points(ccrs.Geodetic(),lats_x+180+180.0, lats_y*1.1)
+lats_y_ticke = ax.projection.transform_points(ccrs.Geodetic(),lats_x+180+179.99, lats_y*1.1)
 lats_y_x = lats_y_ticke[:,0]*0.86
 lats_y_y = lats_y_ticke[:,1]
 #print(lats_y_ticke)
@@ -183,7 +185,7 @@ for index,i in enumerate(lats_y):
 	#ax.plot(x,x_z+i,'-',color = '#d3d7d4',linewidth = 1,transform = ccrs.Geodetic())
 	ax.text(lats_y_x[index]+dx_,lats_y_y[index],r'$%d^{\circ}$'%i,size = 20,ha = 'right',va = 'center')
 	
-
+ax.set_xlabel('sssssss')
 plt.savefig(savedir+'A_map.png')
 plt.close()
 

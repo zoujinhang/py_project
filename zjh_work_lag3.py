@@ -7,7 +7,7 @@ from matplotlib.gridspec import GridSpec
 
 import Data_analysis.file as myfile
 from Data_analysis import ch_to_energy
-from Fermi_tool.lag import get_band,Lag_plot,get_lag
+from Fermi_tool.lag import get_band,Lag_plot,get_lag,Lag_save
 from Fermi_tool.lag import Prior,Lag_fit
 
 savetop = '/home/laojin/my_work/lag/result6/'
@@ -118,6 +118,8 @@ for i in range(len(name)):
 	energy = energy[sort_index]
 	
 	results = get_lag([t,energy],e_band,bins,wind=[t_start[i],t_stop[i]],sigma=4,plot_savedir = savedir+'A_check/')
+	lag_s = Lag_save(results)
+	lag_s.save_lag_csv(savedir+'A_lag.csv')
 	#fit = Lag_fit(model,model_bb2_pl_prior_list,parameters,result = results)
 	fit = Lag_fit(model2,model_lv_pl_prior_list,parameters_lv,result = results)
 	mul_dir = savedir+'A_n_out/'

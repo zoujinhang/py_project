@@ -8,7 +8,7 @@ import os
 import astropy.units as u
 from astropy.coordinates import SkyCoord
 from astropy.table import Table
-datalink = '/home/laojin/trigdata/bn190530430/glg_trigdat_all_bn190530430_v02.fit'
+datalink = '/home/laojin/glg_trigdat_all_bn190530430_v02.fit'
 savedir = '/home/laojin/my_lat/geometry/'
 if os.path.exists(savedir) == False:
 	os.makedirs(savedir)
@@ -28,7 +28,7 @@ fermi_gbm = Geometry(detector=detectors,time_base=fermi_time)
 fermi_gbm.input_pose(quaternion=q4,sc_pos=sic,pos_unit=u.km,time = t_c)
 tab = fermi_gbm.get_separation(index = 122,source = sourec)
 highlight_list = ['n1','n2','n3']
-my_map = fermi_gbm.detector_plot(radius = 10,show_bodies=True,style = 'A',index = 117,highlight=highlight_list,time = t_c[117])
+my_map = fermi_gbm.detector_plot(radius = 10,show_bodies=True,style = 'A',source = sourec,index = 117,highlight=highlight_list,time = t_c[117])
 plt.savefig(savedir + 'B_sky_map.png')
 plt.close()
 
