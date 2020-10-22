@@ -66,7 +66,7 @@ class Detectors(object):
 		for index,di in enumerate(self.name_list):
 			centeri = center_all[index]
 			seq = center_all.separation(centeri)
-			dindx = (seq>0*u.deg)&(seq<=self.effective_angle)
+			dindx = (seq>0*u.deg)&(seq<=1.*self.effective_angle)
 			c[di] = self.name_list[dindx]
 		return c
 	def input_quaternion(self,quaternion,time=None):

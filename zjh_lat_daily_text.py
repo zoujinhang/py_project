@@ -17,7 +17,7 @@ if os.path.exists(savedir) ==False:
 #topdir = '/media/laojin/Elements/daily/'
 topdir = '/media/laojin/TOSHIBA_EXT/daily/'
 timestart = '2020-04-28T00:00:00'
-timestop = '2020-04-28T3:59:00'
+timestop = '2020-04-28T01:59:00'
 
 #timestart = '2013-04-27T07:45:00'
 #timestop = '2013-04-27T07:53:00'
