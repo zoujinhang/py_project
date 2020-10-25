@@ -15,9 +15,10 @@ if os.path.exists(savedir) ==False:
 
 
 #topdir = '/media/laojin/Elements/daily/'
-topdir = '/media/laojin/TOSHIBA_EXT/daily/'
+#topdir = '/media/laojin/TOSHIBA_EXT/daily/'
+topdir = '/home/laojin/daily_data/'
 timestart = '2020-04-28T00:00:00'
-timestop = '2020-04-28T01:59:00'
+timestop = '2020-04-28T23:59:00'
 
 #timestart = '2013-04-27T07:45:00'
 #timestop = '2013-04-27T07:53:00'
@@ -29,7 +30,7 @@ name = ['SGRJ1935']
 #name = ['bn130427324','bn200219413','bn200219317']
 # ----------------------------------------------------
 # Create the sources
-mysources = Sources(positions=[ra, dec], names=name, range_=10)
+mysources = Sources(positions=[ra, dec], names=name, range_=5)
 # ---------------------------------------------------_
 t_sl = time_slic(timestart,timestop,H=3)
 print('The time interval, H =',3)
@@ -130,7 +131,7 @@ def run(t_s):
 		#		plt.savefig(sn_savedir+'B_all_'+str(i)+'.png')
 		#		plt.close()
 
-pool = Pool(2)     # Parallel computing
+pool = Pool(4)     # Parallel computing
 pool.map(run,list(t_sl))
 pool.close()
 pool.join()
