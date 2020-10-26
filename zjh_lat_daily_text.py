@@ -9,7 +9,7 @@ from Data_analysis.geometry import Geometry
 from multiprocessing import Pool
 
 
-savedir = '/home/laojin/my_lat/daily_text/sgr/'
+savedir = '/home/laojin/my_lat/daily_text/sgr1/'
 if os.path.exists(savedir) ==False:
 	os.makedirs(savedir)
 
@@ -18,7 +18,7 @@ if os.path.exists(savedir) ==False:
 #topdir = '/media/laojin/TOSHIBA_EXT/daily/'
 topdir = '/home/laojin/daily_data/'
 timestart = '2020-04-28T00:00:00'
-timestop = '2020-04-28T23:59:00'
+timestop = '2020-04-28T00:59:00'
 
 #timestart = '2013-04-27T07:45:00'
 #timestop = '2013-04-27T07:53:00'
@@ -36,7 +36,13 @@ t_sl = time_slic(timestart,timestop,H=3)
 print('The time interval, H =',3)
 print(t_sl)
 print(str(t_sl[0][0]))
-
+t_savedir = savedir
+print(t_savedir)
+if os.path.exists(t_savedir) ==False:
+	os.makedirs(t_savedir)
+s_savedir = t_savedir + 'Z_no_direction_trig/'
+if os.path.exists(s_savedir) == False:
+	os.makedirs(s_savedir)
 
 #for i,t_s in enumerate(t_sl):
 
@@ -44,13 +50,7 @@ def run(t_s):
 
 	t_start, t_stop = t_s
 	time_markker = str(t_start)[:13]
-	t_savedir = savedir
-	print(t_savedir)
-	if os.path.exists(t_savedir) ==False:
-		os.makedirs(t_savedir)
-	s_savedir = t_savedir + 'Z_no_direction_trig/'
-	if os.path.exists(s_savedir) == False:
-		os.makedirs(s_savedir)
+
 	# ----------------------------------------------------
 	# Create the geometry
 	geometry = Geometry()
@@ -70,16 +70,15 @@ def run(t_s):
 	bayes_size = plt_s.get_bayesian_responses_size()
 	if bayes_size >0:
 		for i in range(bayes_size):
-			
 			plt_s.plot_bayesian_responses(i)
-			plt.savefig(s_savedir + 'A_bayes_'+str(i)+'.png')
+			plt.savefig(s_savedir + 'A_bayes_'+time_markker+'_'+str(i)+'.png')
 			plt.close()
 	thres_size = plt_s.get_threshold_responses_size()
 	if thres_size>0:
 		for i in range(thres_size):
 			
 			plt_s.plot_threshold_responses(i)
-			plt.savefig(s_savedir + 'B_threshold_' + str(i) + '.png')
+			plt.savefig(s_savedir + 'B_threshold_'+time_markker+'_'+ str(i) + '.png')
 			plt.close()
 	
 	ss = Save_search(serch_result,geometry)
@@ -140,7 +139,7 @@ def run(t_s):
 		#		plt.savefig(sn_savedir+'B_all_'+str(i)+'.png')
 		#		plt.close()
 
-pool = Pool(4)     # Parallel computing
+pool = Pool(2)     # Parallel computing
 pool.map(run,list(t_sl))
 pool.close()
 pool.join()

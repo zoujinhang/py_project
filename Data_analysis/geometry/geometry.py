@@ -119,6 +119,8 @@ class Geometry(object):
 			try:
 				
 				n_=len(t)
+				if n_== 0:
+					return SkyCoord(ra = [],dec = [],frame='icrs', unit='deg'),[]
 				t = np.array(t)
 				tband = t.max()-t.min()
 				tband_sl = self.time_band[1] - self.time_band[0]
@@ -320,7 +322,10 @@ class Geometry(object):
 			x_f, y_f, z_f = self.sc_pos_f
 			try:
 				n = len(t)
+				if n == 0:
+					return []
 				t = np.array(t)
+				#print('t',t)
 				tband = t.max() - t.min()
 				tband_sl = self.time_band[1] - self.time_band[0]
 				if tband <= tband_sl + 2:
@@ -528,12 +533,14 @@ class Geometry(object):
 			ax.add_patch(detec)
 			plt.text(centor[i].ra.value, centor[i].dec.value,str(name_), color=self.detectors.color_list[v], size=22*size,transform=ccrs.Geodetic(),va = 'center',ha='center')
 		
-		if source:
+		if source is not None:
 			ax.plot(source.ra.value, source.dec.value, '*', color='#f36c21', markersize=20.*size,transform=ccrs.Geodetic())
-		if points:
-			
-			ax.plot(points.ra.value, points.dec.value, '*', color='#c7a252', markersize=20.*size,transform=ccrs.Geodetic())
-			
+		if points is not None:
+			name_ = points['name']
+			point_coor = points['coord']
+			ax.plot(point_coor.ra.value, point_coor.dec.value, 'o', color='#c7a252', markersize=20.*size,transform=ccrs.Geodetic())
+			for ind_,name_i in enumerate(name_):
+				ax.text(point_coor.ra.value, point_coor.dec.value,str(name_i),size=20.*size,transform=ccrs.Geodetic(),va = 'bottom',ha='right')
 		return ax
 		
 	def detector_video(self,dt,savevdir,radius = 10.0,source=None,points = None,good = False,
