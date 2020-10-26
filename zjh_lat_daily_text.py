@@ -41,12 +41,16 @@ print(str(t_sl[0][0]))
 #for i,t_s in enumerate(t_sl):
 
 def run(t_s):
+
 	t_start, t_stop = t_s
-	t_savedir = savedir +str(t_start)[:13] +'/'
+	time_markker = str(t_start)[:13]
+	t_savedir = savedir
 	print(t_savedir)
 	if os.path.exists(t_savedir) ==False:
 		os.makedirs(t_savedir)
-	
+	s_savedir = t_savedir + 'Z_no_direction_trig/'
+	if os.path.exists(s_savedir) == False:
+		os.makedirs(s_savedir)
 	# ----------------------------------------------------
 	# Create the geometry
 	geometry = Geometry()
@@ -62,9 +66,7 @@ def run(t_s):
 	result = track(serch_result,geometry,mysources)
 	plt_s = Plot_serch(serch_result,detector,geometry)
 	
-	s_savedir = t_savedir + 'good/'
-	if os.path.exists(s_savedir) ==False:
-		os.makedirs(s_savedir)
+
 	bayes_size = plt_s.get_bayesian_responses_size()
 	if bayes_size >0:
 		for i in range(bayes_size):
@@ -81,9 +83,9 @@ def run(t_s):
 			plt.close()
 	
 	ss = Save_search(serch_result,geometry)
-	ss.save_all_responses(t_savedir + 'Z_save_all.csv')
-	ss.save_bayesian_responses(t_savedir + 'Z_save_bayesian.csv')
-	ss.save_threshold_responses(t_savedir + 'Z_save_threshold.csv')
+	ss.save_all_responses(s_savedir + 'Z_save_total_'+time_markker+'.csv')
+	ss.save_bayesian_responses(s_savedir + 'Z_save_bayesian_trig_'+time_markker+'.csv')
+	ss.save_threshold_responses(s_savedir + 'Z_save_threshold_trig_'+time_markker+'.csv')
 	
 	
 	plt_t = Plot_track(result, detector, geometry,sources=mysources)
@@ -91,36 +93,43 @@ def run(t_s):
 	#tirg_data = result['lc']
 	#print(data['n0']['events'])
 	for in_sn,sn in enumerate(mysources.names):
+
+
 		sn_savedir = t_savedir + sn + '/'
 		if os.path.exists(sn_savedir) == False:
 			os.makedirs(sn_savedir)
-		st.save_all_responses(sn,sn_savedir + 'A_save_all.csv')
-		st.save_bayesian_responses(sn,sn_savedir + 'A_save_bayesian.csv')
-		st.save_threshold_responses(sn,sn_savedir + 'A_save_threshold.csv')
+		good_savedir_bayes = sn_savedir + 'A_bayesian_trig/'
+		if os.path.exists(good_savedir_bayes) == False:
+			os.makedirs(good_savedir_bayes)
+		good_savedir = sn_savedir + 'A_simple_trig/'
+		if os.path.exists(good_savedir) == False:
+			os.makedirs(good_savedir)
+
+		st.save_all_responses(sn,sn_savedir + 'B_save_total_'+time_markker+'.csv')
+		st.save_bayesian_responses(sn,good_savedir_bayes + 'B_save_bayesian_trig_'+time_markker+'.csv')
+		st.save_threshold_responses(sn,good_savedir + 'B_save_simple_trig_'+time_markker+'.csv')
 		#plt.figure(constrained_layout=True, figsize=(20, 5*len(detector)))
 		fig,axs = plt.subplots(nrows=len(detector)*2,figsize=(20, 5*len(detector)),constrained_layout=True)
 		source = mysources.positions[in_sn]
 		range_i = mysources.range
 		plt_t.plot_one_source(sn,source,range_i,axs)
-		fig.savefig(sn_savedir + 'A_'+sn+'_analysis.png')
+		fig.savefig(sn_savedir + 'B_'+sn+'_analysis_'+time_markker+'.png')
 		plt.close(fig)
 		
-		good_savedir = sn_savedir + 'good/'
-		if os.path.exists(good_savedir) == False:
-			os.makedirs(good_savedir)
+
 		
 		bayes_size = plt_t.get_bayesian_responses_size(sn)
 		if bayes_size >0:
 			for i in range(bayes_size):
 				plt_t.plot_bayesian_responses(sn,i,sky_map = True)
-				plt.savefig(good_savedir + 'A_bayes_'+str(i)+'.png')
+				plt.savefig(good_savedir_bayes + 'A_bayes_'+time_markker+'_'+str(i)+'.png')
 				plt.close()
-		
+
 		thres_size = plt_t.get_threshold_responses_size(sn)
 		if thres_size>0:
 			for i in range(thres_size):
 				plt_t.plot_threshold_responses(sn,i,sky_map = True)
-				plt.savefig(good_savedir + 'B_threshold_' + str(i) + '.png')
+				plt.savefig(good_savedir + 'A_threshold_'+time_markker+'_' + str(i) + '.png')
 				plt.close()
 		
 		#all_size = plt_t.get_all_responses_size(sn)
