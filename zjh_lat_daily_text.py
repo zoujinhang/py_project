@@ -120,6 +120,7 @@ def run(t_s):
 		bayes_size = plt_t.get_bayesian_responses_size(sn)
 		if bayes_size >0:
 			for i in range(bayes_size):
+				#print(i)
 				plt_t.plot_bayesian_responses(sn,i,sky_map = True)
 				plt.savefig(good_savedir_bayes + 'A_bayes_'+time_markker+'_'+str(i)+'.png')
 				plt.close()
