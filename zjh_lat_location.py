@@ -7,15 +7,32 @@ import cartopy.crs as ccrs
 
 
 filelink = '/home/laojin/my_lat/location/locrates_1deg_50_300_hard_n.dat'
-
+alocdat_comp_link = '/home/laojin/my_lat/location/alocdat_comp.dat'
 savedir = '/home/laojin/my_lat/location/'
 if os.path.exists(savedir) ==False:
 	os.makedirs(savedir)
 
 
-c = np.fromfile(filelink,dtype=np.float)
+response_res = 20
+
+
+grid_spacing=190./(180/np.pi)/(response_res-1)
+for i in range(20):
+	print('grid_point',grid_spacing*i/np.pi*180)
+
+
+scatterdata = myfile.readcol(alocdat_comp_link)
+scatterdata = np.vstack(scatterdata)
+re_scatterdata = scatterdata.reshape((16,236,19))
+#print('scatterdata:\n',scatterdata)
+print('scatterdata shape',scatterdata.shape)
+#print('reshape scatterdata\n',re_scatterdata)
+print('reshape scatterdata shape',re_scatterdata.shape)
+print('re_scatterdata[0]',re_scatterdata[0])
+print('re_scatterdata[0] shape',re_scatterdata[0].shape)
+
+
 dat_ = myfile.readcol(filelink)
-print(c[0])
 print('data\n',dat_[0])
 dtorad = 180.0/np.arccos(-1.0)
 print(dtorad)
@@ -32,13 +49,40 @@ for i in range(1,180):
 print('look',1800/60/dtorad)
 print(npoints)
 
+#-------
+#chi2 experiment
+
+
+
+new_x = np.arange(-100,101,1)
+new_f = np.zeros(201)
+new_chi = np.zeros(201)
+
+x = np.arange(0,1000,1)
+y1 = 10*np.exp(-0.5*((x-500)/200)**2)
+
+for i in range(201):
+	y2 = 100*np.exp(-0.5*((x-400-i)/200)**2)+100
+	f = (y1*(y2-100)/y2).sum()/(y1**2/y2).sum()
+	chi = ((y2-100-f*y1)**2/(100+f*y1)).sum()
+	new_f[i] = f
+	new_chi[i] = chi
+print('f\n',new_f)
+plt.plot(new_x,new_f,label = 'f')
+plt.plot(new_x,new_chi,label = 'chi')
+min_index = np.argmin(new_chi)
+min_new_x = new_x[min_index]
+plt.axvline(x=min_new_x,color = 'r',label = str(min_new_x))
+plt.legend()
+plt.savefig(savedir + 'A_f_chi2.png')
+plt.close()
+
+
+
+#-------
 plt.figure(figsize=(20,10))
 ax = plt.axes(projection=ccrs.Mollweide(central_longitude=180),facecolor = '#f6f5ec')
 ax.plot(ra,dec,color='blue', linewidth=2, marker='.', transform=ccrs.Geodetic(),alpha=0.2)
-
-
-
-
 
 
 #----------------------------------------------------------------------

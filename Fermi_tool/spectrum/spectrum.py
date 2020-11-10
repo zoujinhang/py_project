@@ -77,7 +77,8 @@ class Fit(object):
 					
 					if True in np.isnan(rate):
 						return -np.inf
-					sp = rate.mean()
+					#sp = rate.mean()
+					sp = rate.mean()*(spec.e_hi[i]-spec.e_lo[i])
 					spec1[i] = sp
 				except:
 					print('there are something wrong in your model!')
@@ -423,7 +424,7 @@ class Spectrum(object):
 	'''
 	def __init__(self,spectrum,spectrum_err,rsp_link,effective_band=None,
 	             time = None,
-	             spectrum_name = 'data',e_add_num = 20):
+	             spectrum_name = 'data',e_add_num = 10):
 		hl = fits.open(rsp_link)
 		matr = hl[2].data['MATRIX']
 		matr[-1] = np.zeros(128)
