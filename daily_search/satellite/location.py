@@ -6,6 +6,11 @@ from ..file import findfile,readcol
 import sys
 import os
 
+from mpl_toolkits.mplot3d import axes3d
+import matplotlib.pyplot as plt
+
+
+
 file_name_list = ['alocdat_comp.dat',
 		  'earth_points.dat',
 		  'locrates_1deg_50_300_hard_n.dat',
@@ -36,7 +41,21 @@ for i in range(len(data_name_list)):
 				raise FileNotFoundError
 
 earthpoints = np.array(readcol(location_data['earthpoints']))
-scatterdata = np.array(readcol(location_data['scatterdata'])).reshape((16, 236, 19))
+scatterdata = np.array(readcol(location_data['scatterdata'])).T.reshape((19,236,16))
+scatterdata = scatterdata[:,:,::-1]
+'''
+scatterdata = scatterdata[:,:,::-1]
+
+fig = plt.figure(figsize = (20,50))
+ax = fig.gca(projection = '3d')
+for i in range(16):
+	for j in range(19):
+		for k in range(236):
+			ax.scatter(i,j,k,marker = ',',c = (scatterdata[i,j,k]-scatterdata.min())/(scatterdata.max()-scatterdata.min()),
+				   alpha=(scatterdata[i,j,k]-scatterdata.min())/(scatterdata.max()-scatterdata.min()))
+fig.savefig('/home/laojin/my_lat/location/A_data.png')
+plt.close(fig)
+'''
 
 case_n = {
 	#'case1':(np.array(readcol(location_data['sl'])),np.array([-2.0, -3.4, 70., 10.])),
@@ -90,7 +109,7 @@ class Locate(object):
 		fnorm = ((entries*(rate-bs_rate)/rate).sum(axis = 1))/(entries**2/rate).sum(axis = 1)
 		ccc = (fnorm*(entries.T)).T
 		chi2 = ((rate-bs_rate-ccc)**2/(bs_rate+ccc)).sum(axis = 1)
-		chi2[chi2<0] = 9999
+		chi2[chi2<0] = 99999
 		sort_index = np.argsort(chi2)
 		gindex = sort_index[0]
 		gindex2 = sort_index[1]
@@ -108,15 +127,17 @@ class Locate(object):
 			loc_err_vsmall = True
 			loc_err = 1.
 		## test code for fiducial intensity check for chi2 reliability
-		while error_determined == False and loc_reliable and loc_err_vsmall==loc_err_vsmall:
+		d_chi2 = chi2-chi2[gindex]
+		print(np.sort(d_chi2))
+		while error_determined == False and loc_reliable and loc_err_vsmall==False:
 
-			index_chi = np.where((chi2>=2.28-offset_chi2_delta)&(chi2<=2.32+offset_chi2_delta))[0]
+			index_chi = np.where((d_chi2>=2.28-offset_chi2_delta)&(d_chi2<=2.32+offset_chi2_delta))[0]
 			if len(index_chi)>1:
 				error_determined = True
 				xyz_position = SkyCoord(x=r_cart[index_chi,0],y=r_cart[index_chi,1],z=r_cart[index_chi,2],frame='icrs',representation='cartesian')
 				good_position = SkyCoord(x=r_cart[gindex,0],y=r_cart[gindex,1],z=r_cart[gindex,2],frame='icrs',representation='cartesian')
-				sep_ = xyz_position.separation(good_position)
-				loc_err = np.mean(sep_)
+				sep_ = xyz_position.separation(good_position).deg
+				loc_err = np.max(sep_)
 			if (offset_chi2_delta >= 2.38):
 				loc_err=50.
 				loc_reliable = False
@@ -136,6 +157,8 @@ class Locate(object):
 		erange_index = np.where((mid_enegy>=erange[0])&(mid_enegy<=erange[1]))
 
 		d_energy = tenergies[1:] - tenergies[:-1]
+		zer = np.zeros(len(d_energy))
+		zer[erange_index]=1
 		alpha = param[0]
 		beta = param[1]
 		epeak= param[2]
@@ -151,6 +174,7 @@ class Locate(object):
 		spec[index_2] = ((alpha-beta)*e0/100.)**(alpha-beta)* np.exp(beta-alpha)*(mid_enegy[i]/100.)**beta
 		spec = spec * d_energy
 		f=(spec[erange_index]).sum()
+		spec = spec*zer
 		return spec*fnorm/f
 
 
@@ -173,7 +197,9 @@ class Locate(object):
 		earthp = SkyCoord(x=loc_pos[0],y=loc_pos[1],z=loc_pos[2],frame='icrs',representation='cartesian')
 		seq = xyz_position.separation(earthp) > earth_r*u.degree
 		entries = entries[:,seq]
+		r_cart = r_cart[seq]
 		if spec is None:
+		#if True:
 			return entries
 		scat_spec = self.get_spec(spec, self.tenergies, cenergies)
 		atm_scattered_rates = np.zeros((len(self.detector), len(r_cart)))
@@ -183,8 +209,9 @@ class Locate(object):
 			geom_fac = geom_fac_front
 			scat_geom_fac = 1
 			if direction != 1:
-				geom_fac = geom_fac_back
-				scat_geom_fac = 0
+				#geom_fac = geom_fac_back
+				#scat_geom_fac = 0
+				continue
 
 			for dete_index,dete in enumerate(self.detector):
 				detec_ver = direction*self.geometry.detectors(dete)
@@ -202,7 +229,7 @@ class Locate(object):
 					elev_idet = -1.48353
 				if elev_idet > 1.48353:
 					elev_idet = 1.48353
-				gperp_idet = loc_pos - cos_sita * detec_ver
+				gperp_idet = -loc_pos - cos_sita * detec_ver
 				gperp_idet_mag = np.sqrt((gperp_idet**2).sum())
 
 				c = crossprod(r_cart.T,detec_ver)
@@ -272,9 +299,11 @@ class Locate(object):
 
 					scattered_rates[:] = 0.
 					for i in range(16):
-						r1 = np.interp(bdangle[r_c_index],self.grid_points,self.scatterdata[i,aindex,:])
-						r2= np.interp(bdangle[r_c_index],self.grid_points,self.scatterdata[i,haindex,:])
+						#print('scat',self.scatterdata[:,aindex,i])
+						r1 = np.interp(bdangle[r_c_index],self.grid_points,self.scatterdata[:,aindex,i])
+						r2= np.interp(bdangle[r_c_index],self.grid_points,self.scatterdata[:,haindex,i])
 						scattered_rates[i] = scat_geom_fac*((1.-felev)*r1+felev*r2)
+					#print('scatered_rates',scattered_rates)
 					atm_scattered_rates[dete_index,r_c_index] = (geom_fac*scattered_rates*scat_spec).sum()+atm_scattered_rates[dete_index,r_c_index]
 		entries[2:] = entries[2:]+atm_scattered_rates
 		return entries

@@ -132,12 +132,12 @@ spc_arr_ = f3.create_dataset('spc_err',spc_err2.shape,dtype = np.float)
 spc_arr_[...] = spc_err2
 f3.close()
 
-'''
-for i in range(len(spc)):
+
+for i in [382,383]:
 	myfile.printdatatofile(savedir+'ZZ_spectrum_n2_'+str(i)+'.txt',data = [spc[i],spc_err[i]],format = ['.6f','.6f'])
 	myfile.printdatatofile(savedir+'ZZ_spectrum_b0_'+str(i)+'.txt',data = [spc1[i],spc_err1[i]],format = ['.6f','.6f'])
 	myfile.printdatatofile(savedir+'ZZ_spectrum_n1_'+str(i)+'.txt',data = [spc2[i],spc_err2[i]],format = ['.6f','.6f'])
-'''
+
 
 #lim_tc = 0.5*(lim_edges[1:]+lim_edges[:-1])
 lim_tc = 0.5*(bins_arr[:,0]+bins_arr[:,-1])

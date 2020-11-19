@@ -157,9 +157,9 @@ class Database(object):
 		timelist = []
 		data = None
 		for t_i in range(date_time_arr.shape[0]):
-			year = '%d' % date_time_arr[0].year
-			month = '%.2d' % date_time_arr[0].month
-			day = '%.2d' % date_time_arr[0].day
+			year = '%d' % date_time_arr[t_i].year
+			month = '%.2d' % date_time_arr[t_i].month
+			day = '%.2d' % date_time_arr[t_i].day
 			link = self.topdir + year + '/' + month + '/' + day + '/'
 			date = year+'-'+month+'-'+day
 			timelist.append(date)

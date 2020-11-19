@@ -94,18 +94,18 @@ def prior_bb2(cube,ndim,nparams):
 	cube[2] = 10000*cube[2]
 	cube[3] = 10**(20*cube[3]-10)
 	
-rsp_link_b0 = '/home/laojin/my_lat/spectrum/response_matrix/glg_cspec_b0_bn150330828_v00.rsp'
-rsp_link_n2 = '/home/laojin/my_lat/spectrum/response_matrix/glg_cspec_n2_bn150330828_v00.rsp'
-rsp_link_n1 = '/home/laojin/my_lat/spectrum/response_matrix/glg_cspec_n1_bn150330828_v00.rsp'
+rsp_link_b0 = '/media/laojin/Elements/trigdata/2015/bn150330828/glg_cspec_b0_bn150330828_v00.rsp'
+rsp_link_n2 = '/media/laojin/Elements/trigdata/2015/bn150330828/glg_cspec_n2_bn150330828_v00.rsp'
+rsp_link_n1 = '/media/laojin/Elements/trigdata/2015/bn150330828/glg_cspec_n1_bn150330828_v00.rsp'
 
 #rsp_link_b0 = '/media/laojin/Elements/trigdata/2009/bn090809978/glg_cspec_b0_bn090809978_v01.rsp'
 #rsp_link_n3 = '/media/laojin/Elements/trigdata/2009/bn090809978/glg_cspec_n3_bn090809978_v01.rsp'
 #rsp_link_n4 = '/media/laojin/Elements/trigdata/2009/bn090809978/glg_cspec_n4_bn090809978_v01.rsp'
 
 
-
+datadir = '/home/laojin/my_lat/spectrum/bn150330828/'
 #datadir = '/home/laojin/my_lat/spectrum/bn090809978/'
-datadir = '/home/laojin/my_lat/spectrum/A_spectrum1/'
+#datadir = '/home/laojin/my_lat/spectrum/A_spectrum1/'
 savedir = '/home/laojin/my_lat/spectrum/A_spectrum1/'
 #savedir = '/home/laojin/my_lat/spectrum/A_spectrum_bn090809978/'
 if os.path.exists(savedir)==False:
