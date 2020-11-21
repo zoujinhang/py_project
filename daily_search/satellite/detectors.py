@@ -1,7 +1,8 @@
 
 
 import numpy as np
-from astropy.coordinates import spherical_to_cartesian
+from astropy.coordinates import spherical_to_cartesian,SkyCoord
+import  astropy.units as u
 
 class Detectors(object):
 
@@ -31,7 +32,7 @@ class Detectors(object):
 			self.name = np.array(namelist)
 			self.eff_angle = np.array(eff_angle)
 			self.detetor_vector = np.array(spherical_to_cartesian(1,local_az,local_zen)).T
-
+		self.overlap = self.get_angle_overlap()
 
 
 	def __call__(self,name):
@@ -49,4 +50,43 @@ class Detectors(object):
 
 	def get_names(self):
 		return self.name
+
+	def get_angle_overlap(self):
+		position_array = self.detetor_vector.T
+		center_all = SkyCoord(x=position_array[0],y=position_array[1],z=position_array[2],frame = 'icrs',representation='cartesian')
+		c = {}
+		for index,di in enumerate(self.name):
+			centeri = center_all[index]
+			seq = center_all.separation(centeri).deg
+			dindx = (seq>0)&(seq- 1.*self.eff_angle<=0)
+			c[di] = self.name[dindx]
+		return c
+
+
+	def detector_association(self,namelist,n = 3,m = 3):
+
+		v_ni_list = []
+		for ni in namelist:
+
+			over_list = list(self.overlap[ni])
+			over_list.append(ni)
+			v_ni_list = v_ni_list+over_list
+		ni_n = list(set(v_ni_list))
+		ni_n = np.array(ni_n)
+		ni_nm =[]
+		v_ni_list = np.array(v_ni_list)
+		for ni in ni_n:
+			index_n = np.where(v_ni_list == ni)[0]
+			nn = v_ni_list[index_n].size
+			ni_nm.append(nn)
+		ni_nm = np.array(ni_nm)
+		index_ = np.where(ni_nm>=n)[0]
+		ni_n = ni_n[index_]
+		ni_over_set = set(ni_n)
+		ni_set = set(namelist)
+		ni_union_set = list(ni_set & ni_over_set)
+		num = len(ni_union_set)
+		return num >= m
+
+
 

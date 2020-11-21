@@ -5,7 +5,6 @@ import numpy as np
 from ..file import findfile,readcol
 import sys
 import os
-
 from mpl_toolkits.mplot3d import axes3d
 import matplotlib.pyplot as plt
 
@@ -122,7 +121,7 @@ class Locate(object):
 		error_determined = False
 		loc_reliable = True
 		loc_err_vsmall = False
-		offset_chi2_delta = 0
+		offset_chi2_delta = 0.025
 		if (chi2[gindex2]-chi2[gindex] > 2.3):
 			loc_err_vsmall = True
 			loc_err = 1.
@@ -131,14 +130,15 @@ class Locate(object):
 		print(np.sort(d_chi2))
 		while error_determined == False and loc_reliable and loc_err_vsmall==False:
 
-			index_chi = np.where((d_chi2>=2.28-offset_chi2_delta)&(d_chi2<=2.32+offset_chi2_delta))[0]
+			index_chi = np.where((d_chi2>= 9.21-offset_chi2_delta)&(d_chi2<=9.21+offset_chi2_delta))[0]
 			if len(index_chi)>1:
 				error_determined = True
 				xyz_position = SkyCoord(x=r_cart[index_chi,0],y=r_cart[index_chi,1],z=r_cart[index_chi,2],frame='icrs',representation='cartesian')
 				good_position = SkyCoord(x=r_cart[gindex,0],y=r_cart[gindex,1],z=r_cart[gindex,2],frame='icrs',representation='cartesian')
 				sep_ = xyz_position.separation(good_position).deg
-				loc_err = np.max(sep_)
-			if (offset_chi2_delta >= 2.38):
+				print('what',sep_)
+				loc_err = np.mean(sep_)
+			if (offset_chi2_delta >= 9.21):
 				loc_err=50.
 				loc_reliable = False
 				error_determined = True

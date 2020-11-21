@@ -15,11 +15,15 @@ from Fermi_tool.lag import get_band
 
 
 
-
+topdir = '/home/laojin/daily_data/'
 #topdir = '/media/laojin/Elements/daily/'
-topdir = '/media/laojin/TOSHIBA_EXT/daily/'
-timestart = '2020-04-28T00:00:00'
-timestop = '2020-04-28T00:59:00'
+#topdir = '/media/laojin/TOSHIBA_EXT/daily/'
+#timestart = '2020-04-28T00:00:00'
+#timestop = '2020-04-28T00:59:00'
+
+timestart = '2020-10-01T05:57:00'
+timestop = '2020-10-01T05:59:00'
+
 savedir = '/home/laojin/my_lat/daily_search/'
 binsize = 0.064
 
@@ -101,7 +105,7 @@ plt.plot(bin_c-t_all.min(),bs2,label = 'TD_bs')
 plt.plot(bin_c-t_all.min(),bs2+3*sigma_,label = 'sigma')
 #plt.xlim(1060,1065)
 plt.legend()
-plt.savefig(savedir + 'A_lightcurve.png')
+plt.savefig(savedir + 'A_lightcurve111.png')
 plt.close()
 
 
