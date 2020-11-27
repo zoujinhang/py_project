@@ -10,7 +10,7 @@ class Event(object):
 
 		self.dt1 = 2.6e-6  # dead time
 		self.dt2 = 10e-6   #the dead time of last channel
-		self.t,self.e,self.ch = ch_to_energy(t,ch,self.ch['CHANNEL'].values,self.ch['E_MIN'].values,self.ch['E_MAX'].values)
+		self.t,self.e,self.ch = ch_to_energy(t,ch,self.ch_n['CHANNEL'].values,self.ch_n['E_MIN'].values,self.ch_n['E_MAX'].values)
 		self.t_start = self.t.min()
 		self.t_stop = self.t.max()
 

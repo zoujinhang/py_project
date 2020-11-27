@@ -63,7 +63,7 @@ class Database(object):
 					if data_c[deter]['ch_E'] is None:
 
 						data = hl[1].data
-						data[deter]['ch_E'] = pd.DataFrame({'CHANNEL':np.array(data['CHANNEL'],dtype=np.int16),
+						data_c[deter]['ch_E'] = pd.DataFrame({'CHANNEL':np.array(data['CHANNEL'],dtype=np.int16),
 										    'E_MIN':np.array(data['E_MIN'],dtype = np.float),
 										    'E_MAX':np.array(data['E_MAX'],dtype = np.float)})
 					data = hl[2].data
@@ -82,8 +82,8 @@ class Database(object):
 				t = t[un_index]
 				ch = ch[un_index]
 				t_index = np.where((t>=met_start)&(t<=met_stop))[0]
-				data_c[deter]['events'] = pd.DataFrame({'TIME',t[t_index],
-								      'PHA',ch[t_index]})
+				data_c[deter]['events'] = pd.DataFrame({'TIME':t[t_index],
+								      'PHA':ch[t_index]})
 			else:
 				data_c[deter]['events'] = None
 		return data_c

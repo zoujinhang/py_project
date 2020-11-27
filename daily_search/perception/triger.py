@@ -6,7 +6,7 @@ from astropy.stats import bayesian_blocks
 from .bayesian_duration import background_correction,get_bayesian_duration
 
 
-def bayesian_trig(data,windowlist):
+def bayesian_trig(data,windowlist,detector):
 
 	'''
 	bayesian blocks trigger.
@@ -29,48 +29,96 @@ def bayesian_trig(data,windowlist):
 	new_window_list  = []
 	new_edges_list = []
 	new_name_list = []
-	for start,stop in windowlist:
+	lc_window_index_list = []
+	for index0,(start,stop) in enumerate(windowlist):
 		during = stop - start
-		bins_baseline = np.arange(start, stop, binsize_baseline)
-		bins_lightcurve = np.arange(start, stop, binszie_lightcurve)
-		#bins_lightcurve_c = 0.5 * (bins_lightcurve[1:] + bins_lightcurve[:-1])
-		new_start = []
-		new_stop = []
-		trig_name = []
-		for detei in name:
+		#print('lc durtion',during)
+		if during >= 10*binszie_lightcurve:
+			bins_baseline = np.arange(start, stop, binsize_baseline)
+			bins_lightcurve = np.arange(start, stop, binszie_lightcurve)
+			#bins_lightcurve_c = 0.5 * (bins_lightcurve[1:] + bins_lightcurve[:-1])
+			new_start = []
+			new_stop = []
+			trig_name = []
+			for detei in name:
+				ni = data[detei]
+				ch_E = ni['ch_E']
+				t = ni['events']['TIME'].values
+				ch = ni['events']['PHA'].values
+				lightcurve = Event(ch_E, t, ch)
+				rate_b = lightcurve(bins = bins_baseline,energy_band=[5,900])[1]
+				rate_b = np.concatenate((rate_b[:1],rate_b))
+				bs_f_5_900 = get_background_f(bins_baseline,rate_b)
+				t_cc,rate_c = lightcurve(bins = bins_lightcurve,energy_band=[5,900])
+				bs5_900 = bs_f_5_900(t_cc)
+				n_c5_900 = np.round(rate_c*binszie_lightcurve)
+				rate_c_n = rate_c-bs5_900 + bs5_900.mean()
+				index = n_c5_900>0
+				edges = bayesian_blocks(t_cc[index],n_c5_900[index],fitness='events',gamma = np.exp(-4))
+				edges = np.round(edges / binszie_lightcurve) * binszie_lightcurve
+				edges = np.unique(edges)
+				edges = np.sort(edges)
 
-			ni = data[detei]
-			ch_E = ni['ch_E']
-			t = ni['events']['TIME'].values
-			ch = ni['events']['PHA'].values
-			lightcurve = Event(ch_E, t, ch)
-			t_cb,rate_b = lightcurve(bins = bins_baseline,energy_band=[5,900])
-			bs_f_5_900 = get_background_f(t_cb,rate_b)
-			t_cc,rate_c = lightcurve(bins = bins_lightcurve,energy_band=[5,900])
-			bs5_900 = bs_f_5_900(t_cc)
-			n_c5_900 = np.round(rate_c*binszie_lightcurve)
-			rate_c_n = rate_c-bs5_900 + bs5_900.mean()
-			index = n_c5_900>0
-			edges = bayesian_blocks(t_cc[index],n_c5_900[index],fitness='events',gamma = np.exp(-4))
-			if len(edges)>=4:
-				result = background_correction(t_cc,rate_c_n,edges,degree = 7)
-				startedges,stopedges = get_bayesian_duration(result,sigma = 3,max_snr=False)
-				if startedges.size == stopedges.size:
-					if startedges.size > 0:
-						new_start.append(startedges)
-						new_stop.append(stopedges)
-						trig_name.append([detei]*len(startedges))
-					elif during >= 5:
-						bins_baseline1 = np.arange(start+1, stop-1, binsize_baseline)
-						bins_lightcurve1 = np.arange(start+1, stop-1, binszie_lightcurve)
-						t_cb,rate_b = lightcurve(bins = bins_baseline1,energy_band=[5,900])
-						bs_f_5_900 = get_background_f(t_cb,rate_b)
-						t_cc,rate_c = lightcurve(bins = bins_lightcurve1,energy_band=[5,900])
-						bs5_900 = bs_f_5_900(t_cc)
-						rate_c_n = rate_c-bs5_900 + bs5_900.mean()
-						edges[0] = edges[0]+1
-						edges[-1] = edges[0]-1
-						if len(edges)>=4:
+				if len(edges)>=4:
+					result = background_correction(t_cc,rate_c_n,edges,degree = 7)
+					startedges,stopedges = get_bayesian_duration(result,sigma = 3,max_snr=False)
+					if startedges.size == stopedges.size:
+						if startedges.size > 0:
+							new_start.append(startedges)
+							new_stop.append(stopedges)
+							trig_name.append([detei]*len(startedges))
+						elif during >= 6:
+
+							edges_during = edges[1:] - edges[:-1]
+							if edges_during[0] > 1:
+								edges[0] = edges[0] + 1
+							else:
+								edges = edges[1:]
+							if edges_during[-1] >1:
+								edges[-1] = edges[0] - 1
+							else:
+								edges = edges[:-1]
+							edges = np.round(edges / binszie_lightcurve) * binszie_lightcurve
+							edges = np.unique(edges)
+							edges = np.sort(edges)
+							if len(edges) >= 4:
+								bins_baseline1 = np.arange(start+1, stop-1, binsize_baseline)
+								bins_lightcurve1 = np.arange(start+1, stop-1, binszie_lightcurve)
+								rate_b = lightcurve(bins = bins_baseline1,energy_band=[5,900])[1]
+								rate_b = np.concatenate((rate_b[:1],rate_b))
+								bs_f_5_900 = get_background_f(bins_baseline1,rate_b)
+								t_cc,rate_c = lightcurve(bins = bins_lightcurve1,energy_band=[5,900])
+								bs5_900 = bs_f_5_900(t_cc)
+								rate_c_n = rate_c-bs5_900 + bs5_900.mean()
+								result = background_correction(t_cc,rate_c_n,edges,degree = 7)
+								startedges,stopedges = get_bayesian_duration(result,sigma = 3,max_snr=False)
+								if startedges.size == stopedges.size:
+									if startedges.size > 0:
+										new_start.append(startedges)
+										new_stop.append(stopedges)
+										trig_name.append([detei] * len(startedges))
+					elif during >= 6:
+						edges_during = edges[1:] - edges[:-1]
+						if edges_during[0] > 1:
+							edges[0] = edges[0] + 1
+						else:
+							edges = edges[1:]
+						if edges_during[-1] >1:
+							edges[-1] = edges[0] - 1
+						else:
+							edges = edges[:-1]
+						edges = np.round(edges / binszie_lightcurve) * binszie_lightcurve
+						edges = np.unique(edges)
+						edges = np.sort(edges)
+						if len(edges) >= 4:
+							bins_baseline1 = np.arange(start+1, stop-1, binsize_baseline)
+							bins_lightcurve1 = np.arange(start+1, stop-1, binszie_lightcurve)
+							rate_b = lightcurve(bins = bins_baseline1,energy_band=[5,900])[1]
+							rate_b = np.concatenate((rate_b[:1],rate_b))
+							bs_f_5_900 = get_background_f(bins_baseline1,rate_b)
+							t_cc,rate_c = lightcurve(bins = bins_lightcurve1,energy_band=[5,900])
+							bs5_900 = bs_f_5_900(t_cc)
+							rate_c_n = rate_c-bs5_900 + bs5_900.mean()
 							result = background_correction(t_cc,rate_c_n,edges,degree = 7)
 							startedges,stopedges = get_bayesian_duration(result,sigma = 3,max_snr=False)
 							if startedges.size == stopedges.size:
@@ -78,38 +126,28 @@ def bayesian_trig(data,windowlist):
 									new_start.append(startedges)
 									new_stop.append(stopedges)
 									trig_name.append([detei] * len(startedges))
-				elif during >= 5:
-					bins_baseline1 = np.arange(start+1, stop-1, binsize_baseline)
-					bins_lightcurve1 = np.arange(start+1, stop-1, binszie_lightcurve)
-					t_cb,rate_b = lightcurve(bins = bins_baseline1,energy_band=[5,900])
-					bs_f_5_900 = get_background_f(t_cb,rate_b)
-					t_cc,rate_c = lightcurve(bins = bins_lightcurve1,energy_band=[5,900])
-					bs5_900 = bs_f_5_900(t_cc)
-					rate_c_n = rate_c-bs5_900 + bs5_900.mean()
-					edges[0] = edges[0]+1
-					edges[-1] = edges[0]-1
-					if len(edges)>=4:
-						result = background_correction(t_cc,rate_c_n,edges,degree = 7)
-						startedges,stopedges = get_bayesian_duration(result,sigma = 3,max_snr=False)
-						if startedges.size == stopedges.size:
-							if startedges.size > 0:
-								new_start.append(startedges)
-								new_stop.append(stopedges)
-								trig_name.append([detei] * len(startedges))
 
-		if len(new_start) >= 2: # the trigger of bayesian blocks is good when trigger number is 2.
-			time_edges,namelist = time_overlap(new_start,new_stop,trig_name,binszie_lightcurve)
-			new_time_edges = []
-			new_namelist = []
-			for index_1,edges1 in enumerate(time_edges):
-				if len(namelist)>=2:
-					new_time_edges.append(edges1)
-					new_namelist.append(edges1)
-			new_window_list = new_window_list + get_windows(new_time_edges,start,stop,dt = 0)
-			new_edges_list = new_edges_list + new_time_edges
-			new_name_list = new_name_list + new_namelist
+			if len(new_start) >= 2: # the trigger of bayesian blocks is good when trigger number is 2.
+				time_edges,namelist = time_overlap(new_start,new_stop,trig_name,binszie_lightcurve)
+				new_time_edges = []
+				new_namelist = []
+				lc_window_index = []
+				for index_1,edges1 in enumerate(time_edges):
+					if len(namelist[index_1])>=2:
+						#print('bayes_namelist',namelist[index_1])
+						if detector.detector_association(namelist[index_1],n = 2,m = 2):
+							new_time_edges.append(edges1)
+							new_namelist.append(namelist[index_1])
+							lc_window_index.append(index0)
+					#else:
+					#	new_time_edges.append(edges1)
+					#	new_namelist.append(namelist[index_1])
+				new_window_list = new_window_list + get_windows(new_time_edges,start,stop,dt = 0)
+				new_edges_list = new_edges_list + new_time_edges
+				new_name_list = new_name_list + new_namelist
+				lc_window_index_list = lc_window_index_list + lc_window_index
 
-	return new_edges_list,new_window_list,new_name_list
+	return new_edges_list,new_window_list,new_name_list,lc_window_index_list
 
 def time_overlap(start,stop,namelist,dt):
 
@@ -131,7 +169,7 @@ def time_overlap(start,stop,namelist,dt):
 	all_stop = all_stop[index_]
 	#all_during = all_stop-all_start
 	all_namelist = all_namelist[index_]
-
+	#print('all_namelist',all_namelist)
 	all_dt = (all_start[1:]-all_start[:-1])
 	one_list_start = [all_start[0]]
 	one_list_stop = [all_stop[0]]
@@ -211,7 +249,9 @@ def time_overlap(start,stop,namelist,dt):
 		t_start = mean_start
 		t_stop = max(one_list_stop)
 	new_list.append([t_start,t_stop])
+	#print('new_list',new_list)
 	new_namelist.append(one_list_name)
+	#print('new_namelist',new_namelist)
 	return new_list,new_namelist
 
 
@@ -232,7 +272,9 @@ def try_to_trig(data,detector):
 	binsize_baseline = 1
 	binszie_lightcurve = 0.05
 	name = data.keys()
+	name = np.array(list(name))
 	edges = get_bins(data)
+	#print('get edges:',edges)
 	window_list = []
 	for start,stop in edges:
 
@@ -247,16 +289,18 @@ def try_to_trig(data,detector):
 			t = ni['events']['TIME'].values
 			ch = ni['events']['PHA'].values
 			lightcurve = Event(ch_E,t,ch)
-			t_cb,rate_b = lightcurve(bins = bins_baseline,energy_band=[5,900])
-			bs_f_5_900 = get_background_f(t_cb,rate_b)
+			rate_b = lightcurve(bins = bins_baseline,energy_band=[5,900])[1]
+			rate_b = np.concatenate((rate_b[:1],rate_b))
+			bs_f_5_900 = get_background_f(bins_baseline,rate_b)
 			t_cc,rate_c = lightcurve(bins = bins_lightcurve,energy_band=[5,900])
 			bs5_900 = bs_f_5_900(t_cc)
 			scale = np.sqrt(bs5_900/binszie_lightcurve)
 			SNR5_900_list.append((rate_c-bs5_900)/scale)
 
 		SNR5_900_list = np.vstack(SNR5_900_list).T
+		#print('SNR5_900_list:',SNR5_900_list)
 		time_index_list = []
-		for index,SNR_i in SNR5_900_list:
+		for index,SNR_i in enumerate(SNR5_900_list):
 			good_index = np.where(SNR_i>sigma)[0]
 			#strong_index = np.where(SNR_i>strong)[0]
 			#pf_strong_index = np.where(SNR_i>pf_strong)[0]
@@ -265,7 +309,7 @@ def try_to_trig(data,detector):
 				if detector.detector_association(namelist,n = 3,m = 3):
 					time_index_list.append(index)
 		time_index_list = np.array(time_index_list)
-		time_index_list = get_subsection_index(time_index_list,binszie_lightcurve,distinguish = 5)
+		time_index_list = get_subsection_index(time_index_list,binszie_lightcurve,distinguish = 15)
 		lc_t_list = []
 		for index_i in time_index_list:
 
@@ -291,13 +335,13 @@ def get_windows(lc_t_list,start,stop,dt = 0):
 		elif lc_dt<=20:
 			add_t = 10
 		elif lc_dt<=50:
-			add_t = 30
+			add_t = 20
 		elif lc_dt<=80:
-			add_t = 50
+			add_t = 40
 		elif lc_dt<=100:
-			add_t = 60
+			add_t = 50
 		else:
-			add_t = 80
+			add_t = 50
 		range_t_min = lc_ti[0]-add_t
 		if ind == 0:
 			if range_t_min < start+dt:
@@ -374,7 +418,7 @@ def get_bins(data,wt = 0.1):
 	t_stop = np.unique(t_stop)
 	stop_c = np.zeros(len(t_stop))-1
 
-	edges = np.concatenate([t_start,stop_c])
+	edges = np.concatenate([t_start,t_stop])
 	c_ = np.concatenate([start_c,stop_c])
 	edges_index = np.argsort(edges)
 	edges = edges[edges_index]
@@ -393,7 +437,6 @@ def get_bins(data,wt = 0.1):
 			stop = edges[i]
 			t_start.append(start)
 			t_stop.append(stop)
-
 	bins_list = []
 	n_name = len(name)
 	for i in range(len(t_start)):
@@ -404,9 +447,11 @@ def get_bins(data,wt = 0.1):
 			t = t[np.where((t>=t_start[i])&(t<=t_stop[i]))[0]]
 			indexlist = check_event(t,wt = wt)
 			if len(indexlist)==1:
-				t_ = t[indexlist[0]]
-				if t_.min()<=t_start[i] and t_.max() >= t_stop[i]:
-					n_ = n_ + 1
+				n_ = n_ + 1
+				#t_ = t[indexlist[0]]
+				#if t_.min()<=t_start[i] and t_.max() >= t_stop[i]:
+				#	n_ = n_ + 1
+		print('n_',n_)
 		if n_ == n_name:
 			bins_list.append([t_start[i],t_stop[i]])
 

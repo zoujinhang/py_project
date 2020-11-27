@@ -30,6 +30,10 @@ def TD_baseline(time,rate,lam = None,hwi = None,it = None,inti = None):
 	if(inti is None):
 
 		fillpeak_int = int(len(rate)/10)
+		if len(rate)<50 and len(rate)>5:
+			fillpeak_int = 5
+		elif len(rate)<=5:
+			fillpeak_int = len(rate)
 
 	else:
 		fillpeak_int =inti

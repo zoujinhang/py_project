@@ -12,14 +12,18 @@ def background_correction(t,rate,edges,backgroundsize = 10,degree = 5,plot_save 
 	:param degree:
 	:return:
 	'''
+	#edges = np.sort(edges)
 	re_rate,re_sigma,index_list = re_histogram(t,rate,edges)
 	dt = t[1]-t[0]
 	binsize = edges[1:]-edges[:-1]
+	#print('binsize',binsize)
 	sort_index = np.argsort(-binsize)
 	sort_binsize = binsize[sort_index]
 	sort_sigma = re_sigma[sort_index]
 	sort_re_rate = re_rate[sort_index]
-	sort_index_list = np.array(index_list)[sort_index]
+	sort_index_list = index_list[sort_index]
+	#print('index_list',index_list)
+	#print('edges',edges)
 	background_pool = rate[sort_index_list[0]]
 	correction_t = [edges[0],edges[-1]+dt,t[sort_index_list[0]][0],t[sort_index_list[0]][-1]]
 	mean1 = sort_re_rate[0]
@@ -102,7 +106,7 @@ def re_histogram(t,rate,edges):
 	:return: three array ,The rebined rate and sigma of each bins.
 	'''
 
-
+	#edges = np.sort(edges)
 	re_rate = np.zeros(len(edges)-1)
 	re_sigma = np.zeros(len(edges)-1)
 
@@ -116,7 +120,7 @@ def re_histogram(t,rate,edges):
 
 	for index1,value in enumerate(index_list):
 		one_rate = rate[value]
-		index_list[index1] = value#+index[0]
+		#index_list[index1] = value#+index[0]
 		if len(one_rate) > 0:
 			re_rate[index1] = one_rate.mean()
 			if len(one_rate) == 1:

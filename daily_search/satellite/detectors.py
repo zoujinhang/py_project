@@ -26,7 +26,7 @@ class Detectors(object):
 				 [-0.9978547710, -0.0652279514, -0.0055850266],
 				 [1.0, 0.0, 0.0], [-1.0, 0.0, 0.0]]
 			)
-			self.eff_angle = np.array([60,60,60,60,60,60,60,60,60,60,60,60,60,90,90])
+			self.eff_angle = np.array([60,60,60,60,60,60,60,60,60,60,60,60,90,90])
 
 		else:
 			self.name = np.array(namelist)
@@ -67,7 +67,6 @@ class Detectors(object):
 
 		v_ni_list = []
 		for ni in namelist:
-
 			over_list = list(self.overlap[ni])
 			over_list.append(ni)
 			v_ni_list = v_ni_list+over_list
