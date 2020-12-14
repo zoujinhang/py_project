@@ -1,7 +1,7 @@
 
-from GECAME_tool.database import Burst_database
-from GECAME_tool.satellite import Geometry,Sky_map
-from GECAME_tool import Clock
+from GECAM_tool.database import Burst_database
+from GECAM_tool.satellite import Geometry,Sky_map
+from GECAM_tool import Clock
 import astropy.units as u
 import os
 from astropy.coordinates import SkyCoord

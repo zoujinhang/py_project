@@ -4,7 +4,7 @@ from ..clock import Clock
 import numpy as np
 import astropy.units as u
 from scipy.interpolate import interp1d
-from astropy.coordinates import cartesian_to_spherical,SkyCoord
+from astropy.coordinates import cartesian_to_spherical,SkyCoord,spherical_to_cartesian
 import pandas as pd
 
 
@@ -128,7 +128,7 @@ class Geometry(object):
 			for ni in name:
 				center = (dete_centor[ni]).T
 				center = SkyCoord(ra = center[0],dec = center[1],frame = 'icrs',unit = 'deg')
-				data.append(center.separation(source).value)
+				data.append(center.separation(source).deg)
 				col_name.append(ni)
 			data = np.vstack(data).T
 		except(TypeError):
@@ -138,10 +138,10 @@ class Geometry(object):
 			for ni in name:
 				center = (dete_centor[ni])
 				center = SkyCoord(ra = center[0],dec = center[1],frame = 'icrs',unit = 'deg')
-				data.append(center.separation(source).value)
+				data.append(center.separation(source).deg)
 				col_name.append(ni)
-			data = np.array(data)
-		return 	pd.DataFrame(data=data,columns=col_name,dtype=np.float128)
+			data = np.array([data])
+		return pd.DataFrame(data=data,columns=col_name,dtype=np.float64)
 
 
 	def get_earth_point(self,met_time):
@@ -206,6 +206,15 @@ class Geometry(object):
 		except (TypeError):
 
 			return np.array([self.qsj0_f(time),self.qsj1_f(time),self.qsj2_f(time),self.qsj3_f(time)])
+
+	def j2000_to_local(self,ra,dec,t):
+		qsj = self.get_qsj(t)
+		v = np.array(spherical_to_cartesian(1,dec*u.deg,ra*u.deg))
+		v_l = self.inv_transform_frame_one(v,qsj)
+		position = cartesian_to_spherical(v_l[0],v_l[1],v_l[2])
+		theta = 90 - position[1].deg
+		phi = position[2].deg
+		return theta,phi
 
 
 	def get_transform_mat_one(self,qsj):

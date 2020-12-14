@@ -20,7 +20,8 @@ class Sky_map(object):
 		if 'figsize' in kwargs:
 			self.size = kwargs['figsize'][0]
 		else:
-			self.size = None
+			kwargs['figsize'] = (5,5)
+			self.size = 5
 		self.fig = plt.figure(**kwargs)
 		self.ax = None
 

@@ -2,7 +2,7 @@
 
 import numpy as np
 from astropy.coordinates import spherical_to_cartesian,SkyCoord
-import  astropy.units as u
+
 
 class Detectors(object):
 
@@ -87,5 +87,17 @@ class Detectors(object):
 		num = len(ni_union_set)
 		return num >= m
 
+	def select_points(self,point,detector_list,n = 1):
 
-
+		num = np.zeros(len(point),dtype = int)
+		if len(detector_list)<n:
+			n = len(detector_list)
+		for dete in detector_list:
+			v = self(dete)
+			#print('v',dete,v)
+			v_xyz = SkyCoord(x=v[0],y=v[1],z=v[2],frame='icrs',representation='cartesian')
+			#print('v_xyz',dete,v_xyz)
+			#print('v_xyz eff',dete,self.get_eff_angle(dete))
+			seq = point.separation(v_xyz).deg <=self.get_eff_angle(dete)+5
+			num[seq] = num[seq]+1
+		return np.where(num>=n)[0]

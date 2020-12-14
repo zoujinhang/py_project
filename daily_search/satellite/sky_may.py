@@ -188,6 +188,11 @@ class Sky_map(object):
 		y_x = lats_y_ticke[:,0]
 		y_y = lats_y_ticke[:,1]
 		return self.ax.scatter(y_x,y_y,*args, **kwargs)
+	def tricontour(self,*args, **kwargs):
+		if self.ax is None:
+			self.add_subplot(1,1,1)
+		return self.ax.tricontour(transform=ccrs.Geodetic(),*args, **kwargs)
+
 	def savefig(self,*args, **kwargs):
 		return self.fig.savefig(*args, **kwargs)
 	def close(self):

@@ -1,7 +1,7 @@
 
-from GECAME_tool.database import Daily_database
-from GECAME_tool.satellite import Geometry,Sky_map
-from GECAME_tool import Clock
+from GECAM_tool.database import Daily_database
+from GECAM_tool.satellite import Geometry,Sky_map
+from GECAM_tool import Clock
 import astropy.units as u
 import os
 from astropy.coordinates import SkyCoord
@@ -43,6 +43,7 @@ A_sep.to_csv(savedir+'A_GECAM_A_'+name+'_sep.csv',index=False)
 B_sep = GC_B.get_separation_with_time(met,source)
 B_sep.to_csv(savedir+'A_GECAM_B_'+name+'_sep.csv',index=False)
 
+GC_A.get_separation_with_time(met[0],source)
 for i,t in enumerate(met):
 
 	smp = Sky_map(figsize = (10,10))

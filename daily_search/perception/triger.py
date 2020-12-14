@@ -35,6 +35,8 @@ def bayesian_trig(data,windowlist,detector):
 		#print('lc durtion',during)
 		if during >= 10*binszie_lightcurve:
 			bins_baseline = np.arange(start, stop, binsize_baseline)
+			bins_baseline_c = 0.5 * (bins_baseline[1:] + bins_baseline[:-1])
+			bb_cc = np.concatenate(([start], bins_baseline_c, [stop]))
 			bins_lightcurve = np.arange(start, stop, binszie_lightcurve)
 			#bins_lightcurve_c = 0.5 * (bins_lightcurve[1:] + bins_lightcurve[:-1])
 			new_start = []
@@ -47,8 +49,8 @@ def bayesian_trig(data,windowlist,detector):
 				ch = ni['events']['PHA'].values
 				lightcurve = Event(ch_E, t, ch)
 				rate_b = lightcurve(bins = bins_baseline,energy_band=[5,900])[1]
-				rate_b = np.concatenate((rate_b[:1],rate_b))
-				bs_f_5_900 = get_background_f(bins_baseline,rate_b)
+				rate_b = np.concatenate((rate_b[:1],rate_b,rate_b[-1:]))
+				bs_f_5_900 = get_background_f(bb_cc,rate_b)
 				t_cc,rate_c = lightcurve(bins = bins_lightcurve,energy_band=[5,900])
 				bs5_900 = bs_f_5_900(t_cc)
 				n_c5_900 = np.round(rate_c*binszie_lightcurve)
@@ -62,8 +64,11 @@ def bayesian_trig(data,windowlist,detector):
 				if len(edges)>=4:
 					result = background_correction(t_cc,rate_c_n,edges,degree = 7)
 					startedges,stopedges = get_bayesian_duration(result,sigma = 3,max_snr=False)
+
 					if startedges.size == stopedges.size:
 						if startedges.size > 0:
+							if startedges.size > 1:
+								startedges, stopedges = new_start_stop(startedges,stopedges,cafe=0.5)
 							new_start.append(startedges)
 							new_stop.append(stopedges)
 							trig_name.append([detei]*len(startedges))
@@ -83,17 +88,26 @@ def bayesian_trig(data,windowlist,detector):
 							edges = np.sort(edges)
 							if len(edges) >= 4:
 								bins_baseline1 = np.arange(start+1, stop-1, binsize_baseline)
+								bins_baseline_c1 = 0.5 * (
+										bins_baseline1[1:] + bins_baseline1[:-1])
+								bb_cc1 = np.concatenate(
+									([start+1], bins_baseline_c1, [stop-1]))
 								bins_lightcurve1 = np.arange(start+1, stop-1, binszie_lightcurve)
 								rate_b = lightcurve(bins = bins_baseline1,energy_band=[5,900])[1]
-								rate_b = np.concatenate((rate_b[:1],rate_b))
-								bs_f_5_900 = get_background_f(bins_baseline1,rate_b)
+								rate_b = np.concatenate((rate_b[:1],rate_b,rate_b[-1:]))
+								bs_f_5_900 = get_background_f(bb_cc1,rate_b)
 								t_cc,rate_c = lightcurve(bins = bins_lightcurve1,energy_band=[5,900])
 								bs5_900 = bs_f_5_900(t_cc)
 								rate_c_n = rate_c-bs5_900 + bs5_900.mean()
 								result = background_correction(t_cc,rate_c_n,edges,degree = 7)
 								startedges,stopedges = get_bayesian_duration(result,sigma = 3,max_snr=False)
+
 								if startedges.size == stopedges.size:
 									if startedges.size > 0:
+										if startedges.size > 1:
+											startedges, stopedges = new_start_stop(
+												startedges, stopedges,
+												cafe=0.5)
 										new_start.append(startedges)
 										new_stop.append(stopedges)
 										trig_name.append([detei] * len(startedges))
@@ -112,21 +126,29 @@ def bayesian_trig(data,windowlist,detector):
 						edges = np.sort(edges)
 						if len(edges) >= 4:
 							bins_baseline1 = np.arange(start+1, stop-1, binsize_baseline)
+							bins_baseline_c1 = 0.5 * (
+								bins_baseline1[1:] + bins_baseline1[:-1])
+							bb_cc1 = np.concatenate(
+								([start + 1], bins_baseline_c1, [stop - 1]))
 							bins_lightcurve1 = np.arange(start+1, stop-1, binszie_lightcurve)
 							rate_b = lightcurve(bins = bins_baseline1,energy_band=[5,900])[1]
-							rate_b = np.concatenate((rate_b[:1],rate_b))
-							bs_f_5_900 = get_background_f(bins_baseline1,rate_b)
+							rate_b = np.concatenate((rate_b[:1],rate_b,rate_b[-1:]))
+							bs_f_5_900 = get_background_f(bb_cc1,rate_b)
 							t_cc,rate_c = lightcurve(bins = bins_lightcurve1,energy_band=[5,900])
 							bs5_900 = bs_f_5_900(t_cc)
 							rate_c_n = rate_c-bs5_900 + bs5_900.mean()
 							result = background_correction(t_cc,rate_c_n,edges,degree = 7)
 							startedges,stopedges = get_bayesian_duration(result,sigma = 3,max_snr=False)
+
 							if startedges.size == stopedges.size:
 								if startedges.size > 0:
+									if startedges.size > 1:
+										startedges, stopedges = new_start_stop(
+											startedges, stopedges, cafe=0.5)
 									new_start.append(startedges)
 									new_stop.append(stopedges)
 									trig_name.append([detei] * len(startedges))
-
+			print('bayesian over!')
 			if len(new_start) >= 2: # the trigger of bayesian blocks is good when trigger number is 2.
 				time_edges,namelist = time_overlap(new_start,new_stop,trig_name,binszie_lightcurve)
 				new_time_edges = []
@@ -142,12 +164,23 @@ def bayesian_trig(data,windowlist,detector):
 					#else:
 					#	new_time_edges.append(edges1)
 					#	new_namelist.append(namelist[index_1])
-				new_window_list = new_window_list + get_windows(new_time_edges,start,stop,dt = 0)
+				new_window_list = new_window_list + get_windows(new_time_edges,start,stop,dt = 0,no_overlap=False)
 				new_edges_list = new_edges_list + new_time_edges
 				new_name_list = new_name_list + new_namelist
 				lc_window_index_list = lc_window_index_list + lc_window_index
 
 	return new_edges_list,new_window_list,new_name_list,lc_window_index_list
+
+def new_start_stop(start,stop,cafe = 1.0):
+
+	a = start[1:]
+	b = stop[:-1]
+	dt = a-b
+	index_ = np.where(dt>cafe)[0]
+	a = a[index_]
+	b = b[index_]
+	return np.concatenate((start[:1],a )),np.concatenate((b,stop[-1:]))
+
 
 def time_overlap(start,stop,namelist,dt):
 
@@ -266,7 +299,7 @@ def try_to_trig(data,detector):
 	return : the window of candidate : list[[start,stop],[start,stop],...]
 
 	'''
-	sigma = 4.5
+	sigma = 3.0       #---the frist standerd.
 	#strong = 7
 	#pf_strong = 10
 	binsize_baseline = 1
@@ -279,6 +312,8 @@ def try_to_trig(data,detector):
 	for start,stop in edges:
 
 		bins_baseline = np.arange(start,stop,binsize_baseline)
+		bins_baseline_c = 0.5*(bins_baseline[1:]+bins_baseline[:-1])
+		bb_cc = np.concatenate(([start],bins_baseline_c,[stop]))
 		bins_lightcurve = np.arange(start,stop,binszie_lightcurve)
 		bins_lightcurve_c = 0.5*(bins_lightcurve[1:]+bins_lightcurve[:-1])
 		SNR5_900_list = []
@@ -290,8 +325,8 @@ def try_to_trig(data,detector):
 			ch = ni['events']['PHA'].values
 			lightcurve = Event(ch_E,t,ch)
 			rate_b = lightcurve(bins = bins_baseline,energy_band=[5,900])[1]
-			rate_b = np.concatenate((rate_b[:1],rate_b))
-			bs_f_5_900 = get_background_f(bins_baseline,rate_b)
+			rate_b = np.concatenate((rate_b[:1],rate_b,rate_b[-1:]))
+			bs_f_5_900 = get_background_f(bb_cc,rate_b)
 			t_cc,rate_c = lightcurve(bins = bins_lightcurve,energy_band=[5,900])
 			bs5_900 = bs_f_5_900(t_cc)
 			scale = np.sqrt(bs5_900/binszie_lightcurve)
@@ -301,15 +336,15 @@ def try_to_trig(data,detector):
 		#print('SNR5_900_list:',SNR5_900_list)
 		time_index_list = []
 		for index,SNR_i in enumerate(SNR5_900_list):
-			good_index = np.where(SNR_i>sigma)[0]
+			good_index = np.where(SNR_i>=sigma)[0]
 			#strong_index = np.where(SNR_i>strong)[0]
 			#pf_strong_index = np.where(SNR_i>pf_strong)[0]
 			namelist = name[good_index]
 			if len(good_index)>=3:
-				if detector.detector_association(namelist,n = 3,m = 3):
+				if detector.detector_association(namelist,n = 3,m = 3): #---the frist standerd.
 					time_index_list.append(index)
 		time_index_list = np.array(time_index_list)
-		time_index_list = get_subsection_index(time_index_list,binszie_lightcurve,distinguish = 15)
+		time_index_list = get_subsection_index(time_index_list,binszie_lightcurve,distinguish = 10)
 		lc_t_list = []
 		for index_i in time_index_list:
 
@@ -319,7 +354,7 @@ def try_to_trig(data,detector):
 
 	return window_list
 
-def get_windows(lc_t_list,start,stop,dt = 0):
+def get_windows(lc_t_list,start,stop,dt = 0,no_overlap = True):
 
 	'''
 	expand the time from candidate .
@@ -331,30 +366,30 @@ def get_windows(lc_t_list,start,stop,dt = 0):
 		lc_dt = lc_ti[-1]-lc_ti[0]
 
 		if lc_dt<=2:
-			add_t = 5
-		elif lc_dt<=20:
 			add_t = 10
-		elif lc_dt<=50:
+		elif lc_dt<=20:
 			add_t = 20
+		elif lc_dt<=50:
+			add_t = 30
 		elif lc_dt<=80:
-			add_t = 40
+			add_t = 50
 		elif lc_dt<=100:
-			add_t = 50
+			add_t = 60
 		else:
-			add_t = 50
+			add_t = 80
 		range_t_min = lc_ti[0]-add_t
 		if ind == 0:
 			if range_t_min < start+dt:
 				range_t_min = start+dt
 		else:
-			if range_t_min < lc_t_list[ind-1][-1]:
+			if no_overlap and range_t_min < lc_t_list[ind-1][-1]:
 				range_t_min = lc_t_list[ind-1][-1]
 		range_t_max = lc_ti[-1] + add_t
 		if ind == len(lc_t_list)-1:
 			if range_t_max >stop-dt:
 				range_t_max = stop-dt
 		else:
-			if range_t_max >lc_t_list[ind+1][0]:
+			if no_overlap and range_t_max >lc_t_list[ind+1][0]:
 				range_t_max = lc_t_list[ind+1][0]
 		window_list.append([range_t_min,range_t_max])
 	return window_list

@@ -17,6 +17,7 @@ def TD_baseline(time,rate,lam = None,hwi = None,it = None,inti = None):
 	:return:
 	'''
 	dt = time[1]-time[0]
+	during = np.max(time)-np.min(time)
 	if(lam is None):
 		lam = 100/dt**1.5
 	else:
@@ -29,10 +30,12 @@ def TD_baseline(time,rate,lam = None,hwi = None,it = None,inti = None):
 		it = 5
 	if(inti is None):
 
-		fillpeak_int = int(len(rate)/10)
-		if len(rate)<50 and len(rate)>5:
-			fillpeak_int = 5
-		elif len(rate)<=5:
+		fillpeak_int = int(during/2)
+		if fillpeak_int>len(rate):
+			fillpeak_int = len(rate)
+		#if len(rate)<50 and len(rate)>5:
+		#	fillpeak_int = 5
+		if len(rate)<=5:
 			fillpeak_int = len(rate)
 
 	else:
