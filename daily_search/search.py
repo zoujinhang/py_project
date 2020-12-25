@@ -29,7 +29,7 @@ class Search(object):
 		self.wt = 0.1
 		self.binsize_baseline = 1
 		self.binsize_lightcurve = 0.05
-		self.energy_band = [[5,900],[5,50],[44,300]] #[300,900]
+		self.energy_band = [[8,105],[8,32],[33,84]] #[300,900]
 		self.candidate = []
 		self.time_list = []
 
@@ -56,10 +56,10 @@ class Search(object):
 				detector_lc_list = []
 				detector_bs_list = []
 				for e_band in self.energy_band:
-					rate_b = lightcurve(bins = bins_baseline,energy_band=e_band)[1]
+					rate_b = lightcurve(bins = bins_baseline,energy_band=e_band,channel = True)[1]
 					rate_b = np.concatenate((rate_b[:1],rate_b,rate_b[-1:]))
 					bs_f = get_background_f(bb_cc,rate_b)
-					t_cc,rate_c = lightcurve(bins = bins_lightcurve,energy_band=e_band)
+					t_cc,rate_c = lightcurve(bins = bins_lightcurve,energy_band=e_band,channel = True)
 					bs = bs_f(t_cc)
 					scale = np.sqrt(bs/self.binsize_lightcurve)
 					detector_SNR_list.append((rate_c-bs)/scale)

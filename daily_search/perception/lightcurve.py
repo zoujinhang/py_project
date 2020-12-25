@@ -14,7 +14,7 @@ class Event(object):
 		self.t_start = self.t.min()
 		self.t_stop = self.t.max()
 
-	def __call__(self,binsize = 0.064,bins = None, energy_band = None):
+	def __call__(self,binsize = 0.064,bins = None, energy_band = None,channel = False):
 
 		if bins is None:
 			bins = np.arange(self.t_start, self.t_stop, binsize)
@@ -33,7 +33,10 @@ class Event(object):
 		bin_c = 0.5 * (bins[1:] + bins[:-1])
 		t = self.t
 		if energy_band is not None:
-			e_index = np.where((self.e >=energy_band[0])&(self.e<=energy_band[-1]))[0]
+			if channel:
+				e_index = np.where((self.ch>=energy_band[0])&(self.ch<=energy_band[-1]))[0]
+			else:
+				e_index = np.where((self.e >=energy_band[0])&(self.e<=energy_band[-1]))[0]
 			t = t[e_index]
 
 		bin_n = np.histogram(t,bins = bins)[0]

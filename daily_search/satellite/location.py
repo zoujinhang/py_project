@@ -70,6 +70,11 @@ def crossprod(x,y):
 			  x[2]*y[0] - x[0]*y[2],
 			  x[0]*y[1] - x[1]*y[0]])
 
+def gausion(g,r):
+	sigma = 3.53573364625
+	sep = g.separation(r).deg
+	sum_p = ((1/(np.sqrt(2*np.pi)*sigma))*np.exp(-0.5*(sep/sigma)**2)).sum()
+	return (1/(np.sqrt(2*np.pi)*sigma))*np.exp(-0.5*(sep/sigma)**2)/sum_p
 
 class Locate(object):
 
@@ -95,16 +100,18 @@ class Locate(object):
 
 		rate_sort_index = np.argsort(-rate)
 		norm = 1000./(rate[rate_sort_index[0]]-bs_rate[rate_sort_index[0]]+bs_rate[rate_sort_index[1]]-bs_rate[rate_sort_index[1]])
-		#nc_mrates = (rate-bs_rate)*norm+bs_rate
+		nc_mrates = (rate-bs_rate)*norm+bs_rate
 		#nc_mrates = rate
-		nc_mrates = np.round(rate*during)
-		bs_rate = np.round(bs_rate*during)
+		#nc_mrates = np.round(rate*during)
+		#bs_rate = np.round(bs_rate*during)
 		pos_ = self.geometry.get_pos(t)
 		qsj = self.geometry.get_qsj(t)
 		loc_pos = self.geometry.inv_transform_frame_one(pos_,qsj)
 		loc_pos_mag = np.sqrt((loc_pos**2).sum())
 		loc_pos = loc_pos/loc_pos_mag
 		earth_r = self.geometry.get_earth_point(t)[-1]
+
+
 		loctable_entries = self.get_entries(case,loc_pos,cenergies,earth_r,detector_list=detector_list)
 		az = loctable_entries[0]/60/180*np.pi
 		el = loctable_entries[1]/60/180*np.pi
@@ -126,7 +133,7 @@ class Locate(object):
 		good_f = fnorm[gindex]
 		new_ccc = good_f*entries
 		#n = 4
-		for n in range(500):
+		for n in range(10):
 			fnorm_nnn = (entries[sort_index[n]]*(nc_mrates-bs_rate)/nc_mrates).sum()/(entries[sort_index[n]]**2/nc_mrates).sum()
 			cccnnn=fnorm_nnn*entries[sort_index[n]]
 			chi2nnn = ((nc_mrates-bs_rate-cccnnn)**2/(nc_mrates)).sum()
@@ -138,15 +145,30 @@ class Locate(object):
 			plt.savefig('/home/laojin/my_lat/location/Z_Z_plot'+str(n)+'.png')
 			plt.close()
 
-		L = -0.5*np.log(bs_rate/during).sum()-0.5*((nc_mrates-bs_rate-ccc)**2/(nc_mrates)).sum(axis = 1)
-		P = (1/(2*np.pi)**0.5)**12*np.exp(L)
+		#L = -0.5*np.log(bs_rate/during).sum()-0.5*((nc_mrates-bs_rate-ccc)**2/(nc_mrates)).sum(axis = 1)
+		#P = (1/(2*np.pi)**0.5)**12*np.exp(L)
 
 		gindex2 = sort_index[1]
 		tran_cart = self.geometry.transform_frame_more(r_cart,qsj)
 		position_cart = cartesian_to_spherical(tran_cart[:,0],tran_cart[:,1],tran_cart[:,2])
 
+		loctable_entries1 = self.case_n['case1'][0]
+		az = loctable_entries1[0]/60/180*np.pi
+		el = loctable_entries1[1]/60/180*np.pi
+		r_cart1 = np.vstack([np.sin(el)*np.cos(az),
+				    np.sin(el)*np.sin(az),
+				    np.cos(el)]).T
+		tran_cart1 = self.geometry.transform_frame_more(r_cart1,qsj)
+
+		center_all1 = SkyCoord(x=tran_cart1[:,0],y=tran_cart1[:,1],z=tran_cart1[:,2],frame = 'icrs',representation='cartesian')
+		position2 = cartesian_to_spherical(tran_cart1[:,0],tran_cart1[:,1],tran_cart1[:,2])
+
 		good_cart = r_cart[gindex]
+
 		good_cart = self.geometry.transform_frame_one(good_cart,qsj)
+		center = SkyCoord(x=good_cart[0], y=good_cart[1], z=good_cart[2], frame='icrs',
+				  representation='cartesian')
+		P = gausion(center_all1, center)
 		position = cartesian_to_spherical(good_cart[0],good_cart[1],good_cart[2])
 		error_determined = False
 		loc_reliable = True
@@ -157,7 +179,7 @@ class Locate(object):
 			loc_err = 2.
 		## test code for fiducial intensity check for chi2 reliability
 		d_chi2 = chi2-chi2[gindex]
-		print(list(np.sort(d_chi2)[:100]))
+		print(list(np.sort(d_chi2)[:10]))
 		while error_determined == False and loc_reliable and loc_err_vsmall==False:
 
 			index_chi = np.where((d_chi2>= 2.3-offset_chi2_delta)&(d_chi2<=2.3+offset_chi2_delta))[0]
@@ -177,7 +199,7 @@ class Locate(object):
 				print('location unreliable')
 			offset_chi2_delta=offset_chi2_delta+0.05
 
-		return position[2].deg,position[1].deg,loc_err,position_cart[2].deg,position_cart[1].deg,chi2,P
+		return position[2].deg,position[1].deg,loc_err,position_cart[2].deg,position_cart[1].deg,chi2,P,position2[2].deg,position2[1].deg
 
 
 
@@ -223,6 +245,8 @@ class Locate(object):
 		loc_pos = loc_pos/loc_pos_mag
 		earth_r = self.geometry.get_earth_point(t)[-1]
 		good_entries = None
+
+
 		if format == 0:
 			loctable_entries = self.get_entries_good(self.case_n['case1'][0],loc_pos,earth_r,detector_list=detector_list)
 			az = loctable_entries[0]/60/180*np.pi

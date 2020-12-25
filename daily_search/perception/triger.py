@@ -48,10 +48,10 @@ def bayesian_trig(data,windowlist,detector):
 				t = ni['events']['TIME'].values
 				ch = ni['events']['PHA'].values
 				lightcurve = Event(ch_E, t, ch)
-				rate_b = lightcurve(bins = bins_baseline,energy_band=[5,900])[1]
+				rate_b = lightcurve(bins = bins_baseline,energy_band=[8,105],channel=True)[1]
 				rate_b = np.concatenate((rate_b[:1],rate_b,rate_b[-1:]))
 				bs_f_5_900 = get_background_f(bb_cc,rate_b)
-				t_cc,rate_c = lightcurve(bins = bins_lightcurve,energy_band=[5,900])
+				t_cc,rate_c = lightcurve(bins = bins_lightcurve,energy_band=[8,105],channel=True)
 				bs5_900 = bs_f_5_900(t_cc)
 				n_c5_900 = np.round(rate_c*binszie_lightcurve)
 				rate_c_n = rate_c-bs5_900 + bs5_900.mean()
@@ -68,7 +68,7 @@ def bayesian_trig(data,windowlist,detector):
 					if startedges.size == stopedges.size:
 						if startedges.size > 0:
 							if startedges.size > 1:
-								startedges, stopedges = new_start_stop(startedges,stopedges,cafe=0.5)
+								startedges, stopedges = new_start_stop(startedges,stopedges,cafe=0.3)
 							new_start.append(startedges)
 							new_stop.append(stopedges)
 							trig_name.append([detei]*len(startedges))
@@ -93,10 +93,10 @@ def bayesian_trig(data,windowlist,detector):
 								bb_cc1 = np.concatenate(
 									([start+1], bins_baseline_c1, [stop-1]))
 								bins_lightcurve1 = np.arange(start+1, stop-1, binszie_lightcurve)
-								rate_b = lightcurve(bins = bins_baseline1,energy_band=[5,900])[1]
+								rate_b = lightcurve(bins = bins_baseline1,energy_band=[8,105],channel=True)[1]
 								rate_b = np.concatenate((rate_b[:1],rate_b,rate_b[-1:]))
 								bs_f_5_900 = get_background_f(bb_cc1,rate_b)
-								t_cc,rate_c = lightcurve(bins = bins_lightcurve1,energy_band=[5,900])
+								t_cc,rate_c = lightcurve(bins = bins_lightcurve1,energy_band=[8,105],channel=True)
 								bs5_900 = bs_f_5_900(t_cc)
 								rate_c_n = rate_c-bs5_900 + bs5_900.mean()
 								result = background_correction(t_cc,rate_c_n,edges,degree = 7)
@@ -131,10 +131,10 @@ def bayesian_trig(data,windowlist,detector):
 							bb_cc1 = np.concatenate(
 								([start + 1], bins_baseline_c1, [stop - 1]))
 							bins_lightcurve1 = np.arange(start+1, stop-1, binszie_lightcurve)
-							rate_b = lightcurve(bins = bins_baseline1,energy_band=[5,900])[1]
+							rate_b = lightcurve(bins = bins_baseline1,energy_band=[8,105],channel=True)[1]
 							rate_b = np.concatenate((rate_b[:1],rate_b,rate_b[-1:]))
 							bs_f_5_900 = get_background_f(bb_cc1,rate_b)
-							t_cc,rate_c = lightcurve(bins = bins_lightcurve1,energy_band=[5,900])
+							t_cc,rate_c = lightcurve(bins = bins_lightcurve1,energy_band=[8,105],channel=True)
 							bs5_900 = bs_f_5_900(t_cc)
 							rate_c_n = rate_c-bs5_900 + bs5_900.mean()
 							result = background_correction(t_cc,rate_c_n,edges,degree = 7)
@@ -324,10 +324,10 @@ def try_to_trig(data,detector):
 			t = ni['events']['TIME'].values
 			ch = ni['events']['PHA'].values
 			lightcurve = Event(ch_E,t,ch)
-			rate_b = lightcurve(bins = bins_baseline,energy_band=[5,900])[1]
+			rate_b = lightcurve(bins = bins_baseline,energy_band=[8,105],channel=True)[1]
 			rate_b = np.concatenate((rate_b[:1],rate_b,rate_b[-1:]))
 			bs_f_5_900 = get_background_f(bb_cc,rate_b)
-			t_cc,rate_c = lightcurve(bins = bins_lightcurve,energy_band=[5,900])
+			t_cc,rate_c = lightcurve(bins = bins_lightcurve,energy_band=[8,105],channel=True)
 			bs5_900 = bs_f_5_900(t_cc)
 			scale = np.sqrt(bs5_900/binszie_lightcurve)
 			SNR5_900_list.append((rate_c-bs5_900)/scale)
