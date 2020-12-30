@@ -54,6 +54,9 @@ class Database(object):
 				month = '%.2d' % date_t.month
 				day = '%.2d' % date_t.day
 				hour = '%.2d' % date_t.hour
+				utc_start_time = year + '-' + month + '-' + day + 'T' + hour + ':00:00'
+				met_starti = self.clock.utc_to_met(utc_start_time)
+				met_stopi = met_starti + 3600.0
 				link = self.topdir + year + '/' + month + '/' + day + '/'
 				name = 'glg_tte_'+deter+'_'+year[-2:]+month+day + '_'+hour+'z_v*'
 				file = myfile.findfile(link,name)
@@ -67,8 +70,9 @@ class Database(object):
 										    'E_MIN':np.array(data['E_MIN'],dtype = np.float),
 										    'E_MAX':np.array(data['E_MAX'],dtype = np.float)})
 					data = hl[2].data
-					t.append(np.array(data['TIME'],dtype = np.float))
-					ch.append(np.array(data['PHA'],dtype = np.int16))
+					indexi = np.where((data['TIME']>=met_starti)&(data['TIME']<=met_stopi))[0]
+					t.append(np.array(data['TIME'][indexi],dtype = np.float))
+					ch.append(np.array(data['PHA'][indexi],dtype = np.int16))
 					hl.close()
 				else:
 					print('lost file:',name)

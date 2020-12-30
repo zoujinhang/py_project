@@ -1,109 +1,113 @@
 
-from daily_search.satellite import Sky_map
-from daily_search import Database
+from daily_search import Database,time_slic
 from daily_search import Search
-import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
 import os
-import numpy as np
 from astropy.coordinates import SkyCoord
-
-datatop = '/media/laojin/TOSHIBA_EXT/daily/'
-savetop = '/home/laojin/my_lat/daily_search/new_code1/'
+from multiprocessing import Pool
+from daily_search.file import readcol
+from daily_search.file import printdatatofile
+datatop = '/media/laojin/My_Passport/Fermi_GBM_Dailiy_Data/'
+savetop = '/home/laojin/my_lat/daily_search/new_code10/'
 if os.path.exists(savetop) ==False:
 	os.makedirs(savetop)
 
-t_start = '2020-04-28T00:00:00'
-t_stop = '2020-04-28T01:00:00'
-source = SkyCoord(ra=293.729,dec= 21.3864,frame ='icrs',unit='deg')      #you can change these things
-name = 'SGRJ1935'
-fermi_data = Database(datatop)
 
-data = fermi_data.get_detector_data(t_start,t_stop)
-#print('data:',data['n0']['events'])
-pd_pos_data = fermi_data.get_poshist_data(t_start,t_stop)
+n_max = 4
+t_start = '2020-12-27T00:00:00'
+t_stop = '2020-12-27T23:59:00'
 
-search = Search(data,pd_pos_data)
-location5_50,location50_300 = search.locate()
-#print()
-#print(search.candidate)
-
-for index,lc_t in enumerate(search.time_list):
-
-	edges_ = search.edges_list[index]
-	namelist = search.name_list[index]
-	index_ = np.where((lc_t>=edges_[0]-1)&(lc_t<=edges_[-1]+1))[0]
-	t_c = 0.5*(edges_[0]+edges_[-1])
-	SNR_arr,lc_arr,bs_arr = search.candidate[index]
-
-	if location5_50[index] is not None:
-		ra,dec,err_r,ra_rcat,dec_rcat,chi2 = location5_50[index]
-		c = (chi2-chi2.min())/(chi2.max()-chi2.min())
-		index_x = np.where(c<1)[0]
-		smp = Sky_map(figsize=(10,5))
-		smp.add_subplot(1,1,1)
-		smp.scatter(ra_rcat[index_x],dec_rcat[index_x],marker = ',',c = c[index_x],s = 5)
-		#smp.tricontour(ra_rcat[index_x],dec_rcat[index_x],chi2[index_x]-chi2.min(),[0,2.3,4.61,9.21])
-		smp.tricontour(ra_rcat[index_x], dec_rcat[index_x], chi2[index_x] - chi2.min(), [0,9.21, 18.4, 36.87])
-		smp.plot_earth(t_c,search.geometry)
-		smp.plot_detector(t_c,search.geometry,good_detector_list=namelist)
-		smp.plot(ra,dec,'*',markersize = 10,color = 'orange')
-		smp.add_source(source,name)
-		smp.savefig(savetop+'A_t'+str(index) + '_sky_map_5_50.png')
-		smp.close()
-
-	if location50_300[index] is not None:
-		ra,dec,err_r,ra_rcat,dec_rcat,chi2 = location50_300[index]
-		c = (chi2-chi2.min())/(chi2.max()-chi2.min())
-		index_x = np.where(c<1)[0]
-		smp = Sky_map(figsize=(10,5))
-		smp.add_subplot(1,1,1)
-		smp.scatter(ra_rcat[index_x],dec_rcat[index_x],marker = ',',c = c[index_x],s = 5)
-		#smp.tricontour(ra_rcat[index_x],dec_rcat[index_x],chi2[index_x]-chi2.min(),[0,2.3,4.61,9.21])
-		smp.tricontour(ra_rcat[index_x], dec_rcat[index_x], chi2[index_x] - chi2.min(), [0,9.21, 18.4, 36.87])
-		smp.plot_earth(t_c,search.geometry)
-		smp.plot_detector(t_c,search.geometry,good_detector_list=namelist)
-		smp.plot(ra,dec,'*',markersize = 10,color = 'orange')
-		smp.add_source(source,name)
-		smp.savefig(savetop+'A_t'+str(index) + '_sky_map_50_300.png')
-		smp.close()
+t_ar = time_slic(t_start,t_stop,H=3)
+print('The time interval, H =',3)
+print(t_ar)
+n = len(t_ar)
+print('the number of time window:',n)
+if n > n_max:
+	n = n_max
+print('multiprocessing number:',n)
+source = SkyCoord(ra=[293.729,128.426],dec= [21.3864,27.712],frame ='icrs',unit='deg')      #you can change these things
+name = ['SGRJ1935','sn2020adow']
 
 
-	#print(lc_arr)
-	for i in range(len(search.energy_band)):
-		lc_arri = lc_arr[i].T
-		bs_arri = bs_arr[i].T
-		SNR_arri = SNR_arr[i].T
-		#print(lc_arri)
-		plt.figure(figsize = (10,10))
 
-		for j in range(len(lc_arri)):
-			detec = search.name[j]
-			plt.subplot(6,2,j+1)
-			plt.title(detec)
-			plt.plot(lc_t[index_]-lc_t[0],lc_arri[j][index_],label = 'lc')
-			plt.plot(lc_t[index_]-lc_t[0],bs_arri[j][index_],label = 'bs')
-			if detec in namelist:
-				plt.axvline(x = edges_[0]-lc_t[0],color = 'r')
-				plt.axvline(x = edges_[-1]-lc_t[0],color = 'g')
-			plt.legend()
+def run(t_ar):
 
-		plt.savefig(savetop + 'A_E'+ str(i) + '_t'+str(index) + '_lc.png')
-		plt.close()
+	t_start, t_stop = t_ar
+	time_markker = str(t_start)[:13]+'_3H'
+	fermi_data = Database(datatop)
+	data = fermi_data.get_detector_data(t_start,t_stop)
+	#print('data:',data['n0']['events'])
+	pd_pos_data = fermi_data.get_poshist_data(t_start,t_stop)
+	print(time_markker+' searching begin!')
+	try:
+		search = Search(data,pd_pos_data,marker = time_markker)
+		s_n = search.get_candidate_number()
+		print(time_markker + ' searching over! The number of the candidates is ',s_n)
+		if s_n >=1:
+			save_candidate = savetop + 'all_candidates/' + time_markker + '/'
+			if os.path.exists(save_candidate) == False:
+				os.makedirs(save_candidate)
+			search.save_triggers(save_candidate+'A_trig_summary.csv')
+			#print('-----------------------------------')
+			for i in range(s_n):
+				savedir = save_candidate +'B_candidate_' + str(i) + '/'
+				if os.path.exists(savedir) == False:
+					os.makedirs(savedir)
+				search.save_candidate_signal(i,savedir+'Z_candidate.csv')
+				search.save_candidate_5_50_signal(i,savedir + 'Z_candidate_5_50.csv')
+				search.save_candidate_50_300_signal(i, savedir + 'Z_candidate_50_300.csv')
+				search.plot_candidate_5_50_lc(i, savedir + 'X_lc_5_50.png')
+				search.plot_candidate_50_300_lc(i, savedir + 'X_lc_50_300.png')
+				search.plot_candidate_lc(i, savedir + 'X_lc.png')
+				search.plot_candidate_5_50_SNR(i, savedir + 'Y_snr_5_50.png')
+				search.plot_candidate_50_300_SNR(i, savedir + 'Y_snr_50_300.png')
+				search.plot_candidate_SNR(i, savedir + 'Y_snr.png')
+				search.plot_sky_map(i, savedir + 'W_skymap.png')
+				search.save_location_50_300_chi2(i,savedir + 'V_location_chi2_50_300.csv')
+				search.save_location_5_50_chi2(i, savedir + 'V_location_chi2_5_50.csv')
 
-		plt.figure(figsize = (10,10))
+			for i in range(len(source)):
 
-		for j in range(len(lc_arri)):
-			detec = search.name[j]
-			plt.subplot(6,2,j+1)
-			plt.title(detec)
-			plt.plot(lc_t[index_]-lc_t[0],SNR_arri[j][index_],label = 'lc')
-			if detec in namelist:
-				plt.axvline(x = edges_[0]-lc_t[0],color = 'r')
-				plt.axvline(x = edges_[-1]-lc_t[0],color = 'g')
-			plt.legend()
+				track = search.track_one(source[i], name=name[i])
+				n = track.get_candidate_number()
+				print(time_markker + ' track the source of', name[i], '. The number of candidates is '+str(n))
+				if n >=1:
 
-		plt.savefig(savetop + 'A_E'+ str(i) + '_t'+str(index) + '_SNR.png')
-		plt.close()
+					savedir = savetop + name[i]+'/' + time_markker + '/'
+					if os.path.exists(savedir) == False:
+						os.makedirs(savedir)
+
+					track.save_triggers(savedir + 'A_trig_summary.csv')
+					for i in range(n):
+						savecandidate = savedir + 'B_candidate_'+str(i)+'/'
+						if os.path.exists(savecandidate)==False:
+							os.makedirs(savecandidate)
+						track.save_candidate_5_50_signal(i,savecandidate+'Z_candidate_5_50.csv')
+						track.save_candidate_50_300_signal(i,savecandidate+'Z_candidate_50_300.csv')
+						track.save_candidate_signal(i,savecandidate+'Z_candidate.csv')
+
+						track.plot_candidate_5_50_lc(i,savecandidate + 'X_lc_5_50.png')
+						track.plot_candidate_50_300_lc(i,savecandidate + 'X_lc_50_300.png')
+						track.plot_candidate_lc(i,savecandidate + 'X_lc.png')
+
+						track.plot_candidate_5_50_SNR(i,savecandidate + 'Y_snr_5_50.png')
+						track.plot_candidate_50_300_SNR(i,savecandidate + 'Y_snr_50_300.png')
+						track.plot_candidate_SNR(i,savecandidate + 'Y_snr.png')
+
+						track.plot_sky_map(i,savecandidate + 'W_skymap.png')
+	except :
+		print('something wrong of '+ time_markker)
+		savedir = savetop + 'wrong/'
+		if os.path.exists(savedir) == False:
+			os.makedirs(savedir)
+		printdatatofile(savedir+'A_wrong_'+ time_markker+'.txt',data = [[t_start], [t_stop]])
+
+pool = Pool(n)     # Parallel computing
+pool.map(run,list(t_ar))
+pool.close()
+pool.join()
+
 
 
 

@@ -291,8 +291,12 @@ class Locate(object):
 						chi = chi2
 						sort_index = sort_index1
 		if format != 0:
-			if min_chi>500:
-				return None
+			if during is not None:
+				if min_chi > 500*during:
+					return None
+			else:
+				if min_chi > 500:
+					return None
 		if during is not None:
 			#chi = self.get_chi2(rate,bs_rate,good_entries,during = during)[1]
 			for i in range(40):
@@ -304,9 +308,12 @@ class Locate(object):
 				chi = chi2+chi
 			chi = chi/41
 			sort_index = np.argsort(chi)
-
+			chi = chi/during*0.1
 		tran_cart = self.geometry.transform_frame_more(r_cart,qsj)
 		position_cart = cartesian_to_spherical(tran_cart[:,0],tran_cart[:,1],tran_cart[:,2])
+
+		#P = gausion(center_all1, center)
+
 		#good_position_cart = position_cart[sort_index[0]]
 		error_determined = False
 		loc_reliable = True

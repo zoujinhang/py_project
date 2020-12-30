@@ -3,6 +3,26 @@
 import numpy as np
 from scipy.sparse import csc_matrix,eye,diags
 from scipy.sparse.linalg import spsolve
+import sys
+import ctypes
+import os
+from ..file import findfile
+
+paths = sys.path
+c_lib_link = None
+for path in paths:
+	fand = path+'/daily_search/background/c_lib/'
+	if os.path.exists(fand):
+		sonamelist = findfile(fand,'c_baseline.so.6')
+		if len(sonamelist)>0:
+
+			c_lib_link = fand+sonamelist[0]
+			print('the C lib link is ',c_lib_link)
+			break
+if c_lib_link is not None:
+	clib = ctypes.cdll.LoadLibrary(c_lib_link)
+else:
+	print('can not find the C lib of c_baseline.so.6!')
 
 
 def TD_baseline(time,rate,lam = None,hwi = None,it = None,inti = None):
@@ -22,24 +42,28 @@ def TD_baseline(time,rate,lam = None,hwi = None,it = None,inti = None):
 		lam = 100/dt**1.5
 	else:
 		lam = lam/dt**1.5
-	if(hwi is None):
-		hwi = int(20/dt)
-	else:
-		hwi = int(hwi/dt)
+
 	if(it is None):
-		it = 5
+		it = 14
 	if(inti is None):
 
 		fillpeak_int = int(during/2)
-		if fillpeak_int>len(rate):
-			fillpeak_int = len(rate)
-		#if len(rate)<50 and len(rate)>5:
-		#	fillpeak_int = 5
-		if len(rate)<=5:
-			fillpeak_int = len(rate)
-
+		inti = 2
 	else:
-		fillpeak_int =inti
+		fillpeak_int = int(during/inti)
+
+	if (hwi is None):
+		hwi = int(250 / inti)
+	else:
+		hwi = int(hwi / inti)
+
+	if fillpeak_int > len(rate):
+		fillpeak_int = len(rate)
+	# if len(rate)<50 and len(rate)>5:
+	#	fillpeak_int = 5
+	if len(rate) <= 5:
+		fillpeak_int = len(rate)
+
 	if(lam < 1):
 		lam = 1
 	return baseline_kernel(rate,lambda_=lam,hwi=hwi,it = it,int_ = fillpeak_int)
@@ -80,7 +104,8 @@ def baseline_kernel(spectra,lambda_,hwi,it,int_):
 	:return:
 	'''
 	spectra = np.array(spectra)
-	spectra = get_smooth(spectra,lambda_)
+	w = np.ones(spectra.shape[0])
+	spectra = WhittakerSmooth(spectra,w,lambda_)
 
 	if it != 1 :
 		d1 = np.log10(hwi)
@@ -95,34 +120,44 @@ def baseline_kernel(spectra,lambda_,hwi,it,int_):
 	lefts = np.array(np.ceil(lims[:-1]),dtype = int)#This is the index value
 	rights = np.array(np.floor(lims[1:]),dtype = int)#Same as above
 	minip = (lefts+rights)*0.5#The index
-	xx = np.zeros(int_)
-	for i in range(int_):
-		xx[i] = spectra[lefts[i]:rights[i]+1].mean()
 
+	if clib is not None:
+		c_spectra = (ctypes.c_double * spectra.size)(*list(spectra))
+		len_spec = (ctypes.c_int32)(spectra.size)
+		c_lefts = (ctypes.c_int32 * int_)(*list(lefts))
+		c_rights = (ctypes.c_int32 * int_)(*list(rights))
+		c_xx = (ctypes.c_double * int_)()
+		c_w =  (ctypes.c_int32 * it)(*list(w))
+		len_w = (ctypes.c_int32)(it)
+		len_xx = (ctypes.c_int32)(int_)
+		clib.c_baseline_kernel(c_spectra,len_spec,c_xx,c_lefts,c_rights,len_xx,c_w,len_w)
+		xx = np.array(c_xx)
+	else:
 
-	for i in range(it):
-		# Current window width
-		w0 = w[i]
-		# Point-wise iteration to the right
-		for j in range(1,int_-1):
-			# Interval cut-off close to edges
-			v = min([j,w0,int_-j-1])
-			# Baseline suppression
-			a = xx[j-v:j+v+1].mean()
-			xx[j] = min([a,xx[j]])
-		for j in range(1,int_-1):
-			k = int_-j-1
-			v = min([j,w0,int_-j-1])
-			a = xx[k-v:k+v+1].mean()
-			xx[k] = min([a,xx[k]])
+		xx = np.zeros(int_)
+		for i in range(int_):
+			xx[i] = spectra[lefts[i]:rights[i] + 1].mean()
+		for i in range(it):
+			# Current window width
+			w0 = w[i]
+			# Point-wise iteration to the right
+			for j in range(1,int_-1):
+				# Interval cut-off close to edges
+				v = min([j,w0,int_-j-1])
+				# Baseline suppression
+				a = xx[j-v:j+v+1].mean()
+				xx[j] = min([a,xx[j]])
+			for j in range(1,int_-1):
+				k = int_-j-1
+				v = min([j,w0,int_-j-1])
+				a = xx[k-v:k+v+1].mean()
+				xx[k] = min([a,xx[k]])
 
 	minip = np.concatenate(([0],minip,[spectra.size-1]))
 	xx = np.concatenate((xx[:1],xx,xx[-1:]))
 	index = np.arange(0,spectra.size,1)
 	xxx = np.interp(index,minip,xx)
 	return xxx
-
-
 
 def WhittakerSmooth(x,w,lambda_):
 	'''

@@ -1,4 +1,6 @@
 
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 from matplotlib.patches import Polygon
@@ -20,7 +22,8 @@ class Sky_map(object):
 		if 'figsize' in kwargs:
 			self.size = kwargs['figsize'][0]
 		else:
-			self.size = None
+			kwargs['figsize'] = (5, 5)
+			self.size = 5
 		self.fig = plt.figure(**kwargs)
 		self.ax = None
 
@@ -163,6 +166,11 @@ class Sky_map(object):
 		self.plot(moon_point_d[2].deg, moon_point_d[1].deg, 'o', color='#72777b', markersize=1.5*self.size)
 		self.text(moon_point_d[2].deg, moon_point_d[1].deg, 'moon', size=self.size,va = 'center',ha='center')
 
+	def title(self,*args,**kwargs):
+		if self.ax is None:
+			self.add_subplot(1,1,1)
+		self.ax.set_title(*args,**kwargs)
+
 	def add_subplot(self, *args, **kwargs):
 		if 'lon_0' in kwargs:
 			lon_0 = kwargs['lon_0']
@@ -192,7 +200,10 @@ class Sky_map(object):
 		if self.ax is None:
 			self.add_subplot(1,1,1)
 		return self.ax.tricontour(transform=ccrs.Geodetic(),*args, **kwargs)
-
+	def tricontourf(self,*args, **kwargs):
+		if self.ax is None:
+			self.add_subplot(1,1,1)
+		return self.ax.tricontourf(transform=ccrs.Geodetic(),*args, **kwargs)
 	def savefig(self,*args, **kwargs):
 		return self.fig.savefig(*args, **kwargs)
 	def close(self):

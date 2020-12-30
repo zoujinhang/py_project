@@ -58,7 +58,7 @@ class Detectors(object):
 		for index,di in enumerate(self.name):
 			centeri = center_all[index]
 			seq = center_all.separation(centeri).deg
-			dindx = (seq>0)&(seq- 1.*self.eff_angle<=0)
+			dindx = (seq>0)&(seq- 1.*self.eff_angle<=10)
 			c[di] = self.name[dindx]
 		return c
 
@@ -98,6 +98,6 @@ class Detectors(object):
 			v_xyz = SkyCoord(x=v[0],y=v[1],z=v[2],frame='icrs',representation='cartesian')
 			#print('v_xyz',dete,v_xyz)
 			#print('v_xyz eff',dete,self.get_eff_angle(dete))
-			seq = point.separation(v_xyz).deg <=self.get_eff_angle(dete)+5
+			seq = point.separation(v_xyz).deg <=self.get_eff_angle(dete)+10
 			num[seq] = num[seq]+1
 		return np.where(num>=n)[0]

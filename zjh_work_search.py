@@ -10,7 +10,7 @@ if os.path.exists(savedir) == False:
 
 	os.makedirs(savedir)
 
-target = SkyCoord(ra = 174.3,dec = -2.0,frame = 'icrs',unit= 'deg')
+target = SkyCoord(ra = 128.426,dec = 27.712,frame = 'icrs',unit= 'deg')
 
 df = pd.read_excel(datalink,sheet_name = 'fermigbrst')
 

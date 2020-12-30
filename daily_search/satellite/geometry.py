@@ -107,7 +107,7 @@ class Geometry(object):
 				center = SkyCoord(ra=center[0], dec=center[1], frame='icrs', unit='deg')
 				data.append(center.separation(source).value)
 				col_name.append(ni)
-			data = np.array(data)
+			data = np.array([data])
 		return pd.DataFrame(data=data, columns=col_name, dtype=np.float128)
 
 

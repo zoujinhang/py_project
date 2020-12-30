@@ -2,9 +2,9 @@
 from daily_search.satellite import Detectors,Geometry,Locate,Sky_map
 from daily_search.data_base import Database
 from daily_search.perception import Event
-from daily_search.background import get_background_f
+from daily_search.background import get_background_f,TD_baseline
 #from Fermi_tool.daily import Database
-from Data_analysis import ch_to_energy,TD_bs,TD_baseline
+#from Data_analysis import ch_to_energy,TD_bs,TD_baseline
 from astropy.coordinates import SkyCoord
 import numpy as np
 import matplotlib.pyplot as plt
@@ -14,13 +14,13 @@ import os
 Fermi_dete = Detectors()
 
 print(Fermi_dete('n0'))
-topdir = '/media/laojin/TOSHIBA_EXT/daily/'
-trigtime = 608633290
-source = SkyCoord(ra=6.100 ,dec= -32.000,frame ='icrs',unit='deg')
-name = 'GRB200415367'
+#topdir = '/media/laojin/TOSHIBA_EXT/daily/'
+#trigtime = 608633290
+#source = SkyCoord(ra=6.100 ,dec= -32.000,frame ='icrs',unit='deg')
+#name = 'GRB200415367'
 
-#source = SkyCoord(ra=293.729,dec= 21.3864,frame ='icrs',unit='deg')      #you can change these things
-#name = 'SGRJ1935'
+source = SkyCoord(ra=293.729,dec= 21.3864,frame ='icrs',unit='deg')      #you can change these things
+name = 'SGRJ1935'
 
 
 #name = 'bn180720598'
@@ -35,14 +35,14 @@ name = 'GRB200415367'
 #source = SkyCoord(ra=276.939,dec= -53.643,frame ='icrs',unit='deg')
 #trigtime = 568833894
 
-savedir = '/home/laojin/my_lat/location/'+name+'/'
+savedir = '/home/laojin/my_lat/location_sps/'+name+'/'
 if os.path.exists(savedir)==False:
 	os.makedirs(savedir)
 
 
 #topdir = '/home/laojin/daily_data/'
 #topdir = '/media/laojin/TOSHIBA_EXT/daily/'
-#topdir = '/media/laojin/My_Passport/Fermi_GBM_Dailiy_Data/'
+topdir = '/media/laojin/My_Passport/Fermi_GBM_Dailiy_Data/'
 #timestart = '2020-04-28T00:19:40.00'
 #timestop = '2020-04-28T00:19:47.00'
 
@@ -53,11 +53,11 @@ clock = fermi.clock
 #timestop = '2018-07-20T14:29:37'
 #met_start = clock.utc_to_met(timestart)+1
 #met_stop = clock.utc_to_met(timestop)-1
+trigtime = clock.utc_to_met('2020-04-27T18:33:04.9')
 
 
-
-met_start = trigtime - 100
-met_stop = trigtime + 151
+met_start = trigtime - 50
+met_stop = trigtime + 60
 
 timestart = clock.met_to_utc(met_start)
 timestop = clock.met_to_utc(met_stop)
@@ -77,7 +77,7 @@ bins_lightcurve_c = 0.5*(bins_lightcurve[1:]+bins_lightcurve[:-1])
 bins = np.arange(met_start,met_stop,binszie)
 bin_c = 0.5*(bins[1:]+bins[:-1])
 
-indexi = np.where((bin_c>=trigtime-1)&(bin_c<=trigtime+6))[0]
+indexi = np.where((bin_c>=trigtime+3)&(bin_c<=trigtime+6))[0]
 t_v = bin_c[indexi]
 
 #during = t_v.max()-t_v.min()
@@ -99,13 +99,16 @@ for ni in fermi.detector:
 	time = ni_event['TIME'].values
 	ch = ni_event['PHA'].values
 	lightcurve = Event(ni_ch_n,time,ch)
-	t_cc,rate_b = lightcurve(bins = bins_baseline,energy_band=[33,84],channel = True)
-	rate_b = np.concatenate((rate_b[:1],rate_b,rate_b[-1:]))
-	t_cc = np.concatenate(([met_start],t_cc,[met_stop]))
-	bs_f = get_background_f(t_cc,rate_b)
-	t_cc,rate_c = lightcurve(bins = bins_lightcurve,energy_band=[33,84],channel= True)
-	bs = bs_f(t_cc)
 
+	plt.plot(lightcurve.t, lightcurve.e, ',',color = 'k')
+	plt.yscale('log')
+	plt.axvline(x=t_v[0], color='g')
+	plt.axvline(x=t_v[num], color='r')
+	plt.ylim(9,900)
+	plt.savefig(savedir + 'Y_' + ni + '_count_map.png')
+	plt.close()
+	t_cc,rate_c = lightcurve(bins = bins_lightcurve,energy_band=[33,84],channel= True)
+	bs = TD_baseline(t_cc,rate_c)
 
 
 	#cs,bs = TD_bs(bin_c,rate)
@@ -132,12 +135,14 @@ SNR = (dete_rate - dete_bs)/sigma
 index_list = []
 
 for i in range(t_v.size):
-	index = np.where(SNR[i]>=5)[0]
+	index = np.where(SNR[i]>=3)[0]
 	if len(index) >= 3:
 		index_list.append(i)
+	if len(index_list)*binsize_lightcurve >2:
+		break
 
-#during = binsize_lightcurve*len(index_list)
-during = 1
+during = binsize_lightcurve*len(index_list)
+#during = 1
 dete_rate_good = dete_rate[index_list]
 
 dete_bs_good = dete_bs[index_list]
@@ -160,36 +165,36 @@ print('m_bs',np.round(m_bs*during))
 
 #ra,dec,err_r,ra_rcat,dec_rcat,chi2 = locate.condidate(t_m,np.round(m_rate*during),np.round(m_bs*during),'case3',[44,300],detector_list = detector_list)
 
+ra,dec,err_r,ra_rcat,dec_rcat,chi2 = locate.locate(t_m,m_rate,m_bs,1,[44,300],detector_list=detector_list,during=during)
 
-
-ra,dec,err_r,ra_rcat,dec_rcat,chi2,P,ra_rcat2,dec_rcat2 = locate.condidate(t_m,m_rate,m_bs,during,'case4',[44,300],detector_list = detector_list)
+#ra,dec,err_r,ra_rcat,dec_rcat,chi2,P,ra_rcat2,dec_rcat2 = locate.condidate(t_m,m_rate,m_bs,during,'case3',[44,300],detector_list = detector_list)
 
 print('chi2 max',chi2.max())
 print('chi2 min',chi2.min())
 print('location',ra,dec,err_r)
 print('during',during)
-print('P max',P.max())
+#print('P max',P.max())
 
-P2 = P/P.sum()
-P_sort = np.sort(-P)
+#P2 = P/P.sum()
+#P_sort = np.sort(-P)
 c = (chi2-chi2.min())/(chi2.max()-chi2.min())
 index_x = np.where(c<1)[0]
 
-sort_p = np.sort(P2)[::-1]
+#sort_p = np.sort(P2)[::-1]
 
 p_sum = 0
 h_1sigma = None
 h_2sigma = None
 h_3sigma = None
-for i in -P_sort:
-	p_sum = i+p_sum
-	if p_sum >= 0.6826 and h_1sigma is None:
-		h_1sigma = i
-	if p_sum >= 0.9545 and h_2sigma is None:
-		h_2sigma = i
-	if p_sum >= 0.9974 and h_3sigma is None:
-		h_3sigma = i
-print('sigma list',[h_3sigma,h_2sigma,h_1sigma])
+#for i in -P_sort:
+#	p_sum = i+p_sum
+#	if p_sum >= 0.6826 and h_1sigma is None:
+#		h_1sigma = i
+#	if p_sum >= 0.9545 and h_2sigma is None:
+#		h_2sigma = i
+#	if p_sum >= 0.9974 and h_3sigma is None:
+#		h_3sigma = i
+#print('sigma list',[h_3sigma,h_2sigma,h_1sigma])
 
 line = plt.tricontourf(ra_rcat[index_x],dec_rcat[index_x],chi2[index_x]-chi2.min(),[0,2.3,4.61,9.21])
 print(line)
@@ -205,6 +210,7 @@ smp.tricontour(ra_rcat[index_x],dec_rcat[index_x],chi2[index_x]-chi2.min(),[0,2.
 #smp.tricontour(ra_rcat[index_x],dec_rcat[index_x],P2[index_x],[h_3sigma,h_2sigma,h_2sigma])
 smp.plot_earth(t_v[num],Fermi)
 smp.plot_detector(t_v[num],Fermi)
+smp.plot_sum(t_v[num],Fermi)
 smp.plot(ra,dec,'*',markersize = 10,color = 'orange')
 smp.plot(54.5068,-26.9467,',',markersize = 2,color = 'r')
 smp.savefig(savedir+'A_sky_map_n_101.png')
@@ -217,7 +223,7 @@ smp.add_source(source,name)
 #smp.scatter(ra_rcat[index_x],dec_rcat[index_x],marker = ',',c = c[index_x],s = 5)
 #smp.tricontour(ra_rcat[index_x],dec_rcat[index_x],chi2[index_x]-chi2.min(),[0,2.3,4.61,9.21])
 #smp.scatter(ra_rcat2,dec_rcat2,marker = ',',c = P,s = 5)
-smp.tricontour(ra_rcat2,dec_rcat2,P,[h_3sigma,h_2sigma,h_1sigma])
+#smp.tricontour(ra_rcat2,dec_rcat2,P,[h_3sigma,h_2sigma,h_1sigma])
 smp.plot_earth(t_v[num],Fermi)
 smp.plot_detector(t_v[num],Fermi)
 smp.plot(ra,dec,'*',markersize = 10,color = 'orange')
