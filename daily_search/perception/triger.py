@@ -6,7 +6,7 @@ from astropy.stats import bayesian_blocks
 from .bayesian_duration import background_correction,get_bayesian_duration
 
 
-def bayesian_trig(data,windowlist,detector):
+def bayesian_trig(data,name,windowlist,detector):
 
 	'''
 	bayesian blocks trigger.
@@ -25,7 +25,7 @@ def bayesian_trig(data,windowlist,detector):
 	#binsize_baseline = 1
 	binszie_lightcurve = 0.05
 	#energy_band = [[5,50],[50,300],[300,900]]
-	name = data.keys()
+	#name = data.keys()
 	new_window_list  = []
 	new_edges_list = []
 	new_name_list = []
@@ -368,7 +368,7 @@ def check_edges(edges):
 			continue
 	return new_edges
 
-def try_to_trig(data,detector):
+def try_to_trig(data,name,detector):
 
 	'''
 
@@ -384,9 +384,9 @@ def try_to_trig(data,detector):
 	#pf_strong = 10
 	#binsize_baseline = 1
 	binszie_lightcurve = 0.05
-	name = data.keys()
+	#name = data.keys()
 	name = np.array(list(name))
-	edges = get_bins(data)
+	edges = get_bins(data,name)
 	#print('get edges:',edges)
 	window_list = []
 	for start,stop in edges:
@@ -477,6 +477,11 @@ def get_windows(lc_t_list,start,stop,dt = 0,no_overlap = True):
 				range_t_min = lc_t_list[ind-1][0]-5
 				if range_t_min < start+dt:
 					range_t_min = start+dt
+				if ind >= 2:
+					if range_t_min < lc_t_list[ind-2][-1]:
+						range_t_min = lc_t_list[ind-2][-1]
+
+
 
 		range_t_max = lc_ti[-1] + add_t
 		if ind == len(lc_t_list)-1:
@@ -489,6 +494,9 @@ def get_windows(lc_t_list,start,stop,dt = 0,no_overlap = True):
 				range_t_max = lc_t_list[ind+1][-1]+5
 				if range_t_max >stop-dt:
 					range_t_max = stop-dt
+				if ind <= len(lc_t_list)-1-2:
+					if range_t_max >lc_t_list[ind+2][0]:
+						range_t_max = lc_t_list[ind + 2][0]
 
 		window_list.append([range_t_min,range_t_max])
 	return window_list
@@ -520,7 +528,7 @@ def get_subsection_index(index,binsize,distinguish=1.1):
 
 
 
-def get_bins(data,wt = 0.1):
+def get_bins(data,name,wt = 0.1):
 	'''
 	try to find the edges for every detector data
 
@@ -528,7 +536,7 @@ def get_bins(data,wt = 0.1):
 	return: the list of edges.
 
 	'''
-	name = data.keys()
+	#name = data.keys()
 	n_dete = len(name)
 	t_start = []
 	t_stop = []

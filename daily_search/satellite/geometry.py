@@ -22,6 +22,7 @@ class Geometry(object):
 		else:
 			self.clock = Clock()
 
+		#self.pd_position_data = pd_position_data
 		met_time = pd_position_data['SCLK_UTC'].values
 		self.met_time_band = [met_time.min(), met_time.max()]
 		met_time[0] = met_time[0] - 0.5

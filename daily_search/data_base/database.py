@@ -14,7 +14,7 @@ class Database(object):
 		if detectors is not None:
 			self.detector = detectors
 		else:
-			self.detector = ['n0','n1','n2','n3','n4','n5','n6','n7','n8','n9','na','nb']
+			self.detector = ['n0','n1','n2','n3','n4','n5','n6','n7','n8','n9','na','nb','b0','b1']
 
 		if clock is None:
 
@@ -37,6 +37,7 @@ class Database(object):
 			time_stop =Time(time_stop,format=format,scale=scale)
 		met_start = self.clock.utc_to_met(time_start)-1
 		met_stop = self.clock.utc_to_met(time_stop)+1
+		print('xxx',time_start.fits,time_stop.fits)
 		date_time_arr = pd.date_range(time_start.fits,time_stop.fits,freq = 'H')
 		print(date_time_arr)
 		data_c = {}

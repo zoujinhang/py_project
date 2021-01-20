@@ -7,28 +7,30 @@ from .perception import Event,try_to_trig,bayesian_trig
 import numpy as np
 from astropy.coordinates import SkyCoord
 import pandas as pd
-import matplotlib
-matplotlib.use('Agg')
+#import matplotlib
+#matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-
-
+import os
+from astropy.io import fits
 
 class Search(object):
 
 
 	def __init__(self,data,pd_position_data,marker = None):
 
-		#self.data = data
+		self.data = data
+		self.position = pd_position_data
 		self.marker = marker
-		self.name = np.array(list(data.keys()))
+		self.data_name = np.array(list(data.keys()))
+		self.name = self.data_name[:12]
 		self.geometry = Geometry(pd_position_data)
 		self.location = Locate(self.geometry)
 		self.detector = self.geometry.detectors
 		self.clock = self.geometry.clock
-		self.lc_window_list = try_to_trig(data,self.detector)
+		self.lc_window_list = try_to_trig(data,self.name,self.detector)
 		if self.marker is not None:
 			print(self.marker + ' try_to_trig number:',len(self.lc_window_list))
-		self.edges_list,self.window_list,self.name_list,self.lc_wind_index_list = bayesian_trig(data,self.lc_window_list,self.detector)
+		self.edges_list,self.window_list,self.name_list,self.lc_wind_index_list = bayesian_trig(data,self.name,self.lc_window_list,self.detector)
 		if self.marker is not None:
 			print(self.marker + ' bayesian trig number:',len(self.edges_list))
 		self.sigma = 4
@@ -98,7 +100,7 @@ class Search(object):
 
 				e_band_SNR = np.vstack(e_band_SNR).T
 				e_band_bs = np.vstack(e_band_bs).T
-				e_band_lc = np.stack(e_band_lc).T
+				e_band_lc = np.vstack(e_band_lc).T
 
 				SNR_arr.append(e_band_SNR)
 				lc_arr.append(e_band_lc)
@@ -209,33 +211,113 @@ class Search(object):
 							index_snr50_300=index_snr
 			if len(index_list5_50)>0:
 
-				lc_5_50 = lc_arr[1][index_list5_50]
-				m_rate_5_50 = lc_5_50.mean(axis = 0)
-				bs_5_50 = bs_arr[1][index_list5_50]
-				m_bs_5_50 = bs_5_50.mean(axis = 0)
-				t = (lc_t[index_list5_50]).mean()
-				during = len(index_list5_50)*self.binsize_lightcurve
-				detectorlist = self.name[index_snr5_50]
-				location = self.location.locate(t,m_rate_5_50,m_bs_5_50,0,self.cenergies[0],detector_list=detectorlist,during=during)
-				location5_50.append(location)
+				during = len(index_list5_50) * self.binsize_lightcurve
+				if during>0:
+					lc_5_50 = lc_arr[1][index_list5_50]
+					m_rate_5_50 = lc_5_50.mean(axis = 0)
+					bs_5_50 = bs_arr[1][index_list5_50]
+					m_bs_5_50 = bs_5_50.mean(axis = 0)
+					t = (lc_t[index_list5_50]).mean()
+					detectorlist = self.name[index_snr5_50]
+					location1 = self.location.locate(t,m_rate_5_50,m_bs_5_50,0,self.cenergies[0],detector_list=detectorlist,during=during)
+					location5_50.append(location1)
+				else:
+					location5_50.append(None)
 			else:
 				location5_50.append(None)
 
 			if len(index_list50_300)>0:
 
-				lc_50_300 = lc_arr[2][index_list50_300]
-				m_rate_50_300 = lc_50_300.mean(axis = 0)
-				bs_50_300 = bs_arr[2][index_list50_300]
-				m_bs_50_300 = bs_50_300.mean(axis = 0)
-				t = (lc_t[index_list50_300]).mean()
-				during = len(index_list5_50)*self.binsize_lightcurve
-				detectorlist = self.name[index_snr50_300]
-				location = self.location.locate(t,m_rate_50_300,m_bs_50_300,1,self.cenergies[1],detector_list=detectorlist,during=during)
-				location50_300.append(location)
+				during = len(index_list50_300) * self.binsize_lightcurve
+				if during > 0:
+					lc_50_300 = lc_arr[2][index_list50_300]
+					m_rate_50_300 = lc_50_300.mean(axis = 0)
+					bs_50_300 = bs_arr[2][index_list50_300]
+					m_bs_50_300 = bs_50_300.mean(axis = 0)
+					t = (lc_t[index_list50_300]).mean()
+
+					detectorlist = self.name[index_snr50_300]
+					location2 = self.location.locate(t,m_rate_50_300,m_bs_50_300,1,self.cenergies[1],detector_list=detectorlist,during=during)
+					location50_300.append(location2)
+				else:
+					location50_300.append(None)
 			else:
 				location50_300.append(None)
 
 		return location5_50,location50_300
+
+	def save_candidate_TTE(self,index,savedir,time_markker):
+		window = self.window_list[index]
+		edges_ = self.edges_list[index]
+		for de in self.data_name:
+			ni = self.data[de]
+			ch_E = ni['ch_E']
+			t = ni['events']['TIME'].values
+			ch = ni['events']['PHA'].values
+			index_ = np.where((t>=window[0])&(t<=window[-1]))[0]
+			header0=fits.Header()
+			header0.append(('creator', 'Zou', 'The name who created this PHA file'))
+			header0.append(('telescop', 'Fermi', 'Name of mission/satellite'))
+			header0.append(('TSTART',window[0],'Observation start time'))
+			header0.append(('TSTOP', window[-1], 'Observation stop time'))
+			header0.append(('TRIGTIME', edges_[0], 'Trigger time relative to MJDREF, double precisi'))
+			header0.append(('TRIGA',edges_[0], 'Trigger start'))
+			header0.append(('TRIGB',edges_[-1],'Trigger stop'))
+			hdu0 = fits.PrimaryHDU(header=header0)
+			col1 = fits.Column(name='CHANNEL', format='1I', array=ch_E['CHANNEL'].values)  # 创建列
+			col2 = fits.Column(name='E_MIN', format='1E', unit='keV', array=ch_E['E_MIN'].values)
+			col3 = fits.Column(name='E_MAX', format='1E', unit='keV', array=ch_E['E_MAX'].values)
+			hdu1 = fits.BinTableHDU.from_columns([col1, col2, col3])
+			col4 = fits.Column(name='TIME', format='1D', unit='s', array=t[index_])                              #创建列
+			col5 = fits.Column(name='PHA', format='1I', unit='none', array=ch[index_])
+			hdu2 = fits.BinTableHDU.from_columns([col4, col5])
+			hdul = fits.HDUList([hdu0, hdu1,hdu2])
+			outfile = savedir + time_markker + '_'+de+'.fits'
+			if(os.path.exists(outfile)):
+				os.remove(outfile)
+			hdul.writeto(outfile)
+			hdul.close()
+
+	def save_candidate_poshist(self,index,savedir,time_markker):
+
+		window = self.window_list[index]
+		edges_ = self.edges_list[index]
+		header0 = fits.Header()
+		header0.append(('creator', 'Zou', 'The name who created this PHA file'))
+		header0.append(('telescop', 'Fermi', 'Name of mission/satellite'))
+		header0.append(('TSTART', window[0], 'Observation start time'))
+		header0.append(('TSTOP', window[-1], 'Observation stop time'))
+		header0.append(('TRIGTIME', edges_[0], 'Trigger time relative to MJDREF, double precisi'))
+		header0.append(('TRIGA', edges_[0], 'Trigger start'))
+		header0.append(('TRIGB', edges_[-1], 'Trigger stop'))
+		hdu0 = fits.PrimaryHDU(header=header0)
+		col_name = ['SCLK_UTC','QSJ_1','QSJ_2','QSJ_3','QSJ_4','POS_X','POS_Y','POS_Z','SC_LAT','SC_LON']
+		unit = ['s',None,None,None,None,'m','m','m','deg','deg']
+		formatlist = ['1D','1D','1D','1D','1D','1E','1E','1E','1E','1E']
+		collist = []
+		t = self.position['SCLK_UTC'].values
+		index_ = np.where((t>=window[0])&(t<=window[-1]))[0]
+		for i in range(len(col_name)):
+			coli = fits.Column(name=col_name[i], format=formatlist[i], unit=unit[i],array=self.position[col_name[i]].values[index_])
+			collist.append(coli)
+		hdu1 = fits.BinTableHDU.from_columns(collist)
+		hdul = fits.HDUList([hdu0, hdu1])
+		outfile2 = savedir + time_markker + '_poshist.fits'
+		if(os.path.exists(outfile2)):
+			os.remove(outfile2)
+		hdul.writeto(outfile2)
+		hdul.close()
+
+
+	def get_triggers(self):
+		trig_time = []
+		for i in self.edges_list:
+			trig_time.append(i[0])
+		trig_time = np.array(trig_time)
+		utc_time = self.clock.met_to_utc(trig_time).fits
+		c = {'met': trig_time, 'utc': utc_time, 'trig_detector': self.name_list}
+		save_perspec = pd.DataFrame(c)
+		return save_perspec
 
 	def save_triggers(self,savename):
 
@@ -594,6 +676,15 @@ class Target(object):
 		self.name = name
 		self.geometry = geometry
 		self.clock = self.geometry.clock
+	def get_triggers(self):
+		trig_time = []
+		for i in self.edges_list:
+			trig_time.append(i[0])
+		trig_time = np.array(trig_time)
+		utc_time = self.clock.met_to_utc(trig_time).fits
+		c = {'met':trig_time,'utc':utc_time,'trig_detector':self.new_namelist}
+		save_perspec = pd.DataFrame(c)
+		return save_perspec
 
 	def save_triggers(self,savename):
 

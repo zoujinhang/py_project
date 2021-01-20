@@ -325,7 +325,7 @@ class Locate(object):
 			loc_err = 2.
 		d_chi2 = chi-chi[sort_index[0]]
 		while error_determined == False and loc_reliable and loc_err_vsmall==False:
-			index_chi = np.where((d_chi2>= 9.21-offset_chi2_delta)&(d_chi2<=9.21+offset_chi2_delta))[0]
+			index_chi = np.where((d_chi2>= 2.3-offset_chi2_delta)&(d_chi2<=2.3+offset_chi2_delta))[0]
 			if len(index_chi)>1:
 				error_determined = True
 				xyz_position = SkyCoord(x=r_cart[index_chi,0],y=r_cart[index_chi,1],z=r_cart[index_chi,2],frame='icrs',representation='cartesian')
@@ -335,7 +335,7 @@ class Locate(object):
 				loc_err = np.max(sep_)
 				if loc_err<2:
 					loc_err = 2
-			if (offset_chi2_delta >= 9.21):
+			if (offset_chi2_delta >= 2.3):
 				loc_err = 2
 				loc_reliable = False
 				error_determined = True
@@ -478,8 +478,8 @@ class Locate(object):
 			nn = len(detector_list)-1
 			if nn < 2:
 				nn = 2
-			elif nn>3:
-				nn = 3
+			elif nn>2:
+				nn = 2
 			xyz_position = xyz_position[seq]
 			seq = self.geometry.detectors.select_points(xyz_position,detector_list,n = nn)
 			entries1 = entries1[:,seq]

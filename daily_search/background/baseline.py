@@ -25,7 +25,7 @@ else:
 	print('can not find the C lib of c_baseline.so.6!')
 
 
-def TD_baseline(time,rate,lam = None,hwi = None,it = None,inti = None):
+def TD_baseline(time,rate,lam = None,hwi = None,it = None,inti = None,lambda_2 = None):
 	'''
 
 	:param time:
@@ -39,9 +39,14 @@ def TD_baseline(time,rate,lam = None,hwi = None,it = None,inti = None):
 	dt = time[1]-time[0]
 	during = np.max(time)-np.min(time)
 	if(lam is None):
-		lam = 100/dt**1.5
+		lam = 0.1/dt**1.5
 	else:
 		lam = lam/dt**1.5
+
+	if(lambda_2 is None):
+		lambda_2 = 2/dt**1.5
+	else:
+		lambda_2 = lambda_2/dt**1.5
 
 	if(it is None):
 		it = 14
@@ -66,7 +71,9 @@ def TD_baseline(time,rate,lam = None,hwi = None,it = None,inti = None):
 
 	if(lam < 1):
 		lam = 1
-	return baseline_kernel(rate,lambda_=lam,hwi=hwi,it = it,int_ = fillpeak_int)
+	if lambda_2 <1:
+		lambda_2 = 1
+	return baseline_kernel(rate,lambda_=lam,hwi=hwi,it = it,int_ = fillpeak_int,lambda_2=lambda_2)
 
 
 def get_smooth(spectra,lambda_):
@@ -93,7 +100,7 @@ def get_smooth(spectra,lambda_):
 	return smooth
 
 
-def baseline_kernel(spectra,lambda_,hwi,it,int_):
+def baseline_kernel(spectra,lambda_,hwi,it,int_,lambda_2):
 	'''
 
 	:param spectra:
@@ -157,7 +164,8 @@ def baseline_kernel(spectra,lambda_,hwi,it,int_):
 	xx = np.concatenate((xx[:1],xx,xx[-1:]))
 	index = np.arange(0,spectra.size,1)
 	xxx = np.interp(index,minip,xx)
-	return xxx
+	w = np.ones(xxx.shape[0])
+	return WhittakerSmooth(xxx, w, lambda_2)
 
 def WhittakerSmooth(x,w,lambda_):
 	'''
